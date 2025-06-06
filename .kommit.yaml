@@ -1,0 +1,22 @@
+# Kommit Configuration Example
+# Place this file in one of these locations:
+# - $XDG_CONFIG_HOME/kommit/config.yaml
+# - $HOME/.config/kommit/config.yaml
+# - $HOME/.kommit.yaml
+
+# Ollama API configuration
+ollama:
+  # URL of the Ollama API server
+  server_url: "http://localhost:11434/api/generate"
+  # Model to use for generating commit messages
+  model: "qwen2.5-coder:7b"
+
+# Rules for generating commit messages (be creative and funny!)
+rules: |
+  - Rules:
+    - Begin the message with a short summary of your changes (up to 80 characters as a guideline).
+    - Start with an emoji that best represents the nature of these changes (e.g., 🐛, ✨, 🚀, 🔥, 🧪, 🎨, 🚧, 💩, 🚑️, 🍻)
+    - Capitalization and Punctuation: Capitalize the first word in the sentence and do not end in punctuation.
+    - Separate it from the following body by including a blank line.
+    - The body of your message should provide a more detailed answers how the changes differ from the previous implementation.
+    - Use the imperative, present tense («change», not «changed» or «changes») to be consistent with generated messages fromiuu

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -40,6 +41,8 @@ const (
 	AppName = "kommit"
 	// ConfigFileName is the name of the config file (without extension)
 	ConfigFileName = "config"
+	// LegacyConfigFileName is the name of the config file in the current directory
+	LegacyConfigFileName = ".kommit"
 	// ConfigFileExt is the extension for the config file
 	ConfigFileExt = "yaml"
 )
@@ -49,6 +52,20 @@ var (
 	appConfig *Config
 )
 
+// readAndUnmarshalConfig reads the current config file and unmarshals it into appConfig
+func readAndUnmarshalConfig() error {
+	if err := viper.ReadInConfig(); err != nil {
+		return err
+	}
+
+	// Unmarshal the config
+	appConfig = &Config{}
+	if err := viper.Unmarshal(appConfig); err != nil {
+		return fmt.Errorf("error unmarshaling config: %w", err)
+	}
+	return nil
+}
+
 // Init initializes the configuration
 func Init(configFile string) error {
 	// Set defaults
@@ -57,24 +74,37 @@ func Init(configFile string) error {
 	viper.SetDefault("ollama.model", defaults.Ollama.Model)
 	viper.SetDefault("rules", defaults.Rules)
 
-	// If config file is specified, use that
+	// If config file is explicitly specified, use that
 	if configFile != "" {
 		viper.SetConfigFile(configFile)
-	} else {
-		// Set the config name and type
-		viper.SetConfigName(ConfigFileName)
-	viper.SetConfigType(ConfigFileExt)
+		if err := readAndUnmarshalConfig(); err != nil {
+			return fmt.Errorf("error loading config from %s: %w", configFile, err)
+		}
+		return nil
+	}
 
-		// Set config search paths in order of preference
-		configDirs := getConfigDirs()
-		for _, dir := range configDirs {
-			viper.AddConfigPath(dir)
+	// First try to load .kommit.yaml from current directory
+	if pwd, err := os.Getwd(); err == nil {
+		legacyConfig := filepath.Join(pwd, LegacyConfigFileName+"."+ConfigFileExt)
+		if _, err := os.Stat(legacyConfig); err == nil {
+			viper.SetConfigFile(legacyConfig)
+			if err := readAndUnmarshalConfig(); err != nil {
+				return fmt.Errorf("error loading config from %s: %w", legacyConfig, err)
+			}
+			return nil
 		}
 	}
 
-	// Read in the config file if it exists
-	if err := viper.ReadInConfig(); err != nil {
-		// If we can't read the config file, it's not an error if it doesn't exist
+	// Set up search paths for config.yaml
+	viper.SetConfigName(ConfigFileName)
+	viper.SetConfigType(ConfigFileExt)
+	configDirs := getConfigDirs()
+	for _, dir := range configDirs {
+		viper.AddConfigPath(dir)
+	}
+
+	// Try to read the config
+	if err := readAndUnmarshalConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return err
 		}
@@ -101,22 +131,32 @@ func Get() *Config {
 }
 
 // getConfigDirs returns a list of directories to search for configuration files
-// in order of preference
+// in order of preference:
+// 1. $PWD (for .kommit.yaml)
+// 2. $XDG_CONFIG_HOME/kommit (for config.yaml)
+// 3. $HOME/.config/kommit (for config.yaml)
+// 4. $HOME (for .kommit.yaml)
 func getConfigDirs() []string {
 	var dirs []string
 
-	// Check XDG config home
+	// 1. Current working directory (for .kommit.yaml)
+	if pwd, err := os.Getwd(); err == nil {
+		dirs = append(dirs, pwd)
+	}
+
+	// 2. XDG config home (for config.yaml)
 	if xdgConfigHome := os.Getenv("XDG_CONFIG_HOME"); xdgConfigHome != "" {
 		dirs = append(dirs, filepath.Join(xdgConfigHome, AppName))
 	}
 
-	// Check standard XDG config directory
+	// 3. Standard XDG config directory (for config.yaml)
 	home, err := os.UserHomeDir()
 	if err == nil {
-		xdgConfigPath := filepath.Join(home, ".config", AppName)
-		dirs = append(dirs, xdgConfigPath)
+		dirs = append(dirs, filepath.Join(home, ".config", AppName))
+	}
 
-		// Add legacy config path for backward compatibility
+	// 4. Home directory (for .kommit.yaml)
+	if home != "" {
 		dirs = append(dirs, home)
 	}
 
