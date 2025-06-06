@@ -143,7 +143,7 @@ func generateCommitMessage(diff string) (*CommitMessage, error) {
 
 Rules:
 	- Begin the message with a short summary of your changes (up to 80 characters as a guideline). 
-	- Capitalization and Punctuation: Capitalize the first word and do not end in punctuation.
+	- Capitalization and Punctuation: Capitalize the first word in the sentence and do not end in punctuation.
   - Separate it from the following body by including a blank line. 
 	- The body of your message should provide a more detailed answers how the changes differ from the previous implementation.
 	- Use the imperative, present tense («change», not «changed» or «changes») to be consistent with generated messages from commands like git merge.
