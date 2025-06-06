@@ -2,32 +2,18 @@ package cmd
 
 import (
 	"bufio"
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"net/http"
 	"os"
 	"strings"
 
 	"github.com/madflow/kommit/internal/config"
 	"github.com/madflow/kommit/internal/git"
 	"github.com/madflow/kommit/internal/logger"
+	"github.com/madflow/kommit/internal/ollama"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var cfgFile string
-
-type OllamaRequest struct {
-	Model  string `json:"model"`
-	Prompt string `json:"prompt"`
-	Stream bool   `json:"stream"`
-}
-
-type OllamaResponse struct {
-	Response string `json:"response"`
-	Done     bool   `json:"done"`
-}
 
 type CommitMessage struct {
 	Message string
@@ -101,9 +87,14 @@ var rootCmd = &cobra.Command{
 		logger.Info("Analyzing changes...")
 
 		// Generate commit message using Ollama
-		message, err := generateCommitMessage(diff)
+		cfg := config.Get()
+		ollamaClient := ollama.NewClient(&cfg.Ollama)
+		messageText, err := ollamaClient.GenerateCommitMessage(diff, cfg.Rules)
 		if err != nil {
 			logger.Fatal("Error generating commit message: %v", err)
+		}
+		message := &CommitMessage{
+			Message: strings.TrimSpace(messageText),
 		}
 
 		// Display generated message
@@ -132,50 +123,7 @@ func Execute() {
 	}
 }
 
-func generateCommitMessage(diff string) (*CommitMessage, error) {
-	// Truncate diff if it's too long (Ollama has token limits)
-	maxDiffLength := 4000
-	if len(diff) > maxDiffLength {
-		diff = diff[:maxDiffLength] + "\n... (truncated)"
-	}
 
-	// Get configuration
-	cfg := config.Get()
-
-	// Build the prompt using the rules from config
-	prompt := fmt.Sprintf(`You are a git commit message generator. Analyze the git diff and respond with ONLY the commit message.
-
-Rules:
-%s
-
-Git diff:
-%s`, cfg.Rules, diff)
-
-	reqBody, err := json.Marshal(OllamaRequest{
-		Model:  cfg.Ollama.Model,
-		Prompt: prompt,
-		Stream: false,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error creating request: %v", err)
-	}
-
-	// Use server URL from config
-	resp, err := http.Post(cfg.Ollama.ServerURL, "application/json", bytes.NewBuffer(reqBody))
-	if err != nil {
-		return nil, fmt.Errorf("error making request to Ollama: %v", err)
-	}
-	defer resp.Body.Close()
-
-	var ollamaResp OllamaResponse
-	if err := json.NewDecoder(resp.Body).Decode(&ollamaResp); err != nil {
-		return nil, fmt.Errorf("error decoding response: %v", err)
-	}
-
-	return &CommitMessage{
-		Message: strings.TrimSpace(ollamaResp.Response),
-	}, nil
-}
 
 func askForConfirmation() bool {
 	reader := bufio.NewReader(os.Stdin)
