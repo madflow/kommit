@@ -142,12 +142,14 @@ func generateCommitMessage(diff string) (*CommitMessage, error) {
 	prompt := fmt.Sprintf(`You are a git commit message generator. Analyze the git diff and respond with ONLY the commit message.
 
 Rules:
-- Begin your message with a short summary of your changes (up to 80 characters as a guideline). 
-- Separate it from the following body by including a blank line. 
-- The body of your message should provide detailed answers to the following questions:
-  * Why is this change being made?
-  * How does it address the issue?
-  * Any side effects or other important information?
+	- Begin the message with a short summary of your changes (up to 80 characters as a guideline). 
+	- Capitalization and Punctuation: Capitalize the first word and do not end in punctuation.
+  - Separate it from the following body by including a blank line. 
+	- The body of your message should provide a more detailed answers how the changes differ from the previous implementation.
+	- Use the imperative, present tense («change», not «changed» or «changes») to be consistent with generated messages from commands like git merge.
+	-  Be direct, try to eliminate filler words and phrases in these sentences (examples: though, maybe, I think, kind of). 
+
+
 
 Git diff:
 %s`, diff)
