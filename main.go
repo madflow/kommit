@@ -22,9 +22,8 @@ type OllamaResponse struct {
 	Done     bool   `json:"done"`
 }
 
-type CommitMessages struct {
-	Short string
-	Long  string
+type CommitMessage struct {
+	Message string
 }
 
 func main() {
@@ -37,16 +36,23 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Check if there are any changes to commit
+	hasChanges, err := hasChangesToCommit()
+	if err != nil {
+		fmt.Printf("❌ Error checking for changes: %v\n", err)
+		os.Exit(1)
+	}
+
+	if !hasChanges {
+		fmt.Println("✅ No changes to commit")
+		return
+	}
+
 	// Check git status
 	status, err := getGitStatus()
 	if err != nil {
 		fmt.Printf("❌ Error getting git status: %v\n", err)
 		os.Exit(1)
-	}
-
-	if strings.TrimSpace(status) == "" {
-		fmt.Println("✅ No changes to commit")
-		return
 	}
 
 	fmt.Println("📊 Git Status:")
@@ -73,21 +79,32 @@ func main() {
 			fmt.Printf("❌ Error getting git diff after staging: %v\n", err)
 			os.Exit(1)
 		}
+
+		// Double-check we have actual changes after staging
+		if strings.TrimSpace(diff) == "" {
+			fmt.Println("✅ No actual changes found after staging")
+			return
+		}
 	}
 
-	fmt.Println("🔍 Analyzing changes with Ollama...")
+	// Final check: ensure we have meaningful diff content
+	if len(strings.TrimSpace(diff)) < 10 {
+		fmt.Println("✅ No meaningful changes to commit")
+		return
+	}
 
-	// Generate commit messages using Ollama
-	messages, err := generateCommitMessages(diff)
+	fmt.Println("🔍 Analyzing changes with CodeLlama...")
+
+	// Generate commit message using Ollama
+	message, err := generateCommitMessage(diff)
 	if err != nil {
-		fmt.Printf("❌ Error generating commit messages: %v\n", err)
+		fmt.Printf("❌ Error generating commit message: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Display generated messages
-	fmt.Println("\n📝 Generated Commit Messages:")
-	fmt.Println("Short:", messages.Short)
-	fmt.Println("Long:", messages.Long)
+	// Display generated message
+	fmt.Println("\n📝 Generated Commit Message:")
+	fmt.Printf("Message: %s\n", message.Message)
 	fmt.Println()
 
 	// Ask user for confirmation
@@ -97,7 +114,7 @@ func main() {
 	}
 
 	// Commit the changes
-	if err := commitChanges(messages.Long); err != nil {
+	if err := commitChanges(message.Message); err != nil {
 		fmt.Printf("❌ Error committing changes: %v\n", err)
 		os.Exit(1)
 	}
@@ -108,6 +125,26 @@ func main() {
 func isGitRepo() bool {
 	cmd := exec.Command("git", "rev-parse", "--git-dir")
 	return cmd.Run() == nil
+}
+
+func hasChangesToCommit() (bool, error) {
+	// Check for staged changes
+	cmd := exec.Command("git", "diff", "--cached", "--quiet")
+	if err := cmd.Run(); err == nil {
+		// No staged changes, check for unstaged changes
+		cmd = exec.Command("git", "diff", "--quiet")
+		if err := cmd.Run(); err == nil {
+			// Check for untracked files
+			cmd = exec.Command("git", "ls-files", "--others", "--exclude-standard")
+			output, err := cmd.Output()
+			if err != nil {
+				return false, err
+			}
+			return strings.TrimSpace(string(output)) != "", nil
+		}
+		return true, nil // Has unstaged changes
+	}
+	return true, nil // Has staged changes
 }
 
 func getGitStatus() (string, error) {
@@ -137,29 +174,30 @@ func stageAllChanges() error {
 	return cmd.Run()
 }
 
-func generateCommitMessages(diff string) (*CommitMessages, error) {
+func generateCommitMessage(diff string) (*CommitMessage, error) {
 	// Truncate diff if it's too long (Ollama has token limits)
 	maxDiffLength := 4000
 	if len(diff) > maxDiffLength {
 		diff = diff[:maxDiffLength] + "\n... (truncated)"
 	}
 
-	prompt := fmt.Sprintf(`Based on the following git diff, generate two commit messages:
+	prompt := fmt.Sprintf(`You are a git commit message generator. Analyze the git diff and respond with ONLY the commit message.
 
-1. A short commit message (max 50 characters, conventional commit format)
-2. A longer commit message (max 72 characters per line, explaining what and why)
+Rules:
+- Maximum 80 characters
+- NO prefixes like "feat:" or "fix:"
+- NO explanatory text
+- NO quotes
+- Use imperative mood
+- Be concise and specific
 
 Git diff:
 %s
 
-Please respond in this exact format:
-SHORT: [short message]
-LONG: [longer message]
-
-Focus on what changed and why it's important. Use conventional commit prefixes like feat:, fix:, docs:, refactor:, etc.`, diff)
+COMMIT MESSAGE:`, diff)
 
 	reqBody := OllamaRequest{
-		Model:  "llama3.1", // You can change this to your preferred model
+		Model:  "codellama", // Using CodeLlama model
 		Prompt: prompt,
 		Stream: false,
 	}
@@ -181,57 +219,44 @@ Focus on what changed and why it's important. Use conventional commit prefixes l
 		return nil, err
 	}
 
-	return parseCommitMessages(ollamaResp.Response)
+	return parseCommitMessage(ollamaResp.Response)
 }
 
-func parseCommitMessages(response string) (*CommitMessages, error) {
+func parseCommitMessage(response string) (*CommitMessage, error) {
 	lines := strings.Split(response, "\n")
-	messages := &CommitMessages{}
 
+	// Find the first non-empty, meaningful line that doesn't contain meta text
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if strings.HasPrefix(strings.ToUpper(line), "SHORT:") {
-			messages.Short = strings.TrimSpace(strings.TrimPrefix(line, "SHORT:"))
-			messages.Short = strings.TrimSpace(strings.TrimPrefix(messages.Short, "short:"))
-		} else if strings.HasPrefix(strings.ToUpper(line), "LONG:") {
-			messages.Long = strings.TrimSpace(strings.TrimPrefix(line, "LONG:"))
-			messages.Long = strings.TrimSpace(strings.TrimPrefix(messages.Long, "long:"))
+
+		// Skip empty lines and common AI response patterns
+		if line == "" ||
+			strings.Contains(strings.ToLower(line), "here's") ||
+			strings.Contains(strings.ToLower(line), "based on") ||
+			strings.Contains(strings.ToLower(line), "commit message") ||
+			strings.Contains(strings.ToLower(line), "git diff") ||
+			strings.Contains(strings.ToLower(line), "possible") ||
+			strings.Contains(strings.ToLower(line), "following") ||
+			strings.HasPrefix(line, "COMMIT MESSAGE:") {
+			continue
+		}
+
+		// Remove any quotes
+		line = strings.Trim(line, `"'`)
+
+		// Truncate to 80 characters if necessary
+		if len(line) > 80 {
+			line = line[:77] + "..."
+		}
+
+		// Must have some actual content
+		if len(line) > 3 {
+			return &CommitMessage{Message: line}, nil
 		}
 	}
 
-	// Fallback if parsing fails
-	if messages.Short == "" || messages.Long == "" {
-		// Try to extract first meaningful line as short, rest as long
-		meaningfulLines := []string{}
-		for _, line := range lines {
-			line = strings.TrimSpace(line)
-			if line != "" && !strings.HasPrefix(line, "Based on") {
-				meaningfulLines = append(meaningfulLines, line)
-			}
-		}
-
-		if len(meaningfulLines) > 0 {
-			if messages.Short == "" {
-				messages.Short = meaningfulLines[0]
-				if len(messages.Short) > 50 {
-					messages.Short = messages.Short[:47] + "..."
-				}
-			}
-			if messages.Long == "" {
-				messages.Long = strings.Join(meaningfulLines, "\n")
-			}
-		}
-	}
-
-	// Final fallback
-	if messages.Short == "" {
-		messages.Short = "chore: update files"
-	}
-	if messages.Long == "" {
-		messages.Long = messages.Short
-	}
-
-	return messages, nil
+	// Fallback
+	return &CommitMessage{Message: "Update files"}, nil
 }
 
 func askForConfirmation() bool {
