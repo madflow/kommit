@@ -36,7 +36,7 @@ type CommitMessage struct {
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "kommit",
-	Short: "Git commits for the disillusioned human being",
+	Short: "Git commits for the rest of us",
 	Run: func(cmd *cobra.Command, args []string) {
 		logger.Println("🤖 Kommit")
 		logger.Println("================================")
