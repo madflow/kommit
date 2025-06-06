@@ -93,7 +93,7 @@ func main() {
 		return
 	}
 
-	fmt.Println("🔍 Analyzing changes with CodeLlama...")
+	fmt.Println("🔍 Analyzing changes...")
 
 	// Generate commit message using Ollama
 	message, err := generateCommitMessage(diff)
@@ -184,12 +184,12 @@ func generateCommitMessage(diff string) (*CommitMessage, error) {
 	prompt := fmt.Sprintf(`You are a git commit message generator. Analyze the git diff and respond with ONLY the commit message.
 
 Rules:
-- Maximum 80 characters
+- Maximum 120 characters
 - NO prefixes like "feat:" or "fix:"
 - NO explanatory text
 - NO quotes
-- Use imperative mood
-- Be concise and specific
+- Be concise and specific without to much detail
+- Focus on what has changed
 
 Git diff:
 %s
@@ -197,7 +197,7 @@ Git diff:
 COMMIT MESSAGE:`, diff)
 
 	reqBody := OllamaRequest{
-		Model:  "codellama", // Using CodeLlama model
+		Model:  "qwen2.5-coder:7b",
 		Prompt: prompt,
 		Stream: false,
 	}
@@ -228,18 +228,6 @@ func parseCommitMessage(response string) (*CommitMessage, error) {
 	// Find the first non-empty, meaningful line that doesn't contain meta text
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-
-		// Skip empty lines and common AI response patterns
-		if line == "" ||
-			strings.Contains(strings.ToLower(line), "here's") ||
-			strings.Contains(strings.ToLower(line), "based on") ||
-			strings.Contains(strings.ToLower(line), "commit message") ||
-			strings.Contains(strings.ToLower(line), "git diff") ||
-			strings.Contains(strings.ToLower(line), "possible") ||
-			strings.Contains(strings.ToLower(line), "following") ||
-			strings.HasPrefix(line, "COMMIT MESSAGE:") {
-			continue
-		}
 
 		// Remove any quotes
 		line = strings.Trim(line, `"'`)
