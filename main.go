@@ -27,7 +27,7 @@ type CommitMessage struct {
 }
 
 func main() {
-	fmt.Println("🤖 Ollama Git Auto-Commit Tool")
+	fmt.Println("🤖 Kommit ")
 	fmt.Println("================================")
 
 	// Check if we're in a git repository
