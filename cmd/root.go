@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/madflow/kommit/internal/git"
+	"github.com/madflow/kommit/internal/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -36,106 +37,97 @@ var rootCmd = &cobra.Command{
 	Use:   "kommit",
 	Short: "Git commits for the disillusioned human being",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("🤖 Kommit ")
-		fmt.Println("================================")
+		logger.Println("🤖 Kommit")
+		logger.Println("================================")
 
 		// Check if we're in a git repository
 		if !git.IsGitRepo() {
-			fmt.Println("❌ Error: Not in a git repository")
-			os.Exit(1)
+			logger.Fatal("Not in a git repository")
 		}
 
 		// Check if there are any changes to commit
 		hasChanges, err := git.HasChangesToCommit()
 		if err != nil {
-			fmt.Printf("❌ Error checking for changes: %v\n", err)
-			os.Exit(1)
+			logger.Fatal("Error checking for changes: %v", err)
 		}
 
 		if !hasChanges {
-			fmt.Println("✅ No changes to commit")
+			logger.Success("No changes to commit")
 			return
 		}
 
 		// Check git status
 		status, err := git.GetGitStatus()
 		if err != nil {
-			fmt.Printf("❌ Error getting git status: %v\n", err)
-			os.Exit(1)
+			logger.Fatal("Error getting git status: %v", err)
 		}
 
-		fmt.Println("📊 Git Status:")
-		fmt.Println(status)
-		fmt.Println()
+		logger.Println("📊 Git Status:")
+		logger.Println(status)
+		logger.Println()
 
 		// Get git diff
 		diff, err := git.GetGitDiff()
 		if err != nil {
-			fmt.Printf("❌ Error getting git diff: %v\n", err)
-			os.Exit(1)
+			logger.Fatal("Error getting git diff: %v", err)
 		}
 
 		if strings.TrimSpace(diff) == "" {
-			fmt.Println("📝 No staged changes found. Staging all changes...")
+			logger.Info("No staged changes found. Staging all changes...")
 			if err := git.StageAllChanges(); err != nil {
-				fmt.Printf("❌ Error staging changes: %v\n", err)
-				os.Exit(1)
+				logger.Fatal("Error staging changes: %v", err)
 			}
 
 			// Get diff again after staging
 			diff, err = git.GetGitDiff()
 			if err != nil {
-				fmt.Printf("❌ Error getting git diff after staging: %v\n", err)
-				os.Exit(1)
+				logger.Fatal("Error getting git diff after staging: %v", err)
 			}
 
 			// Double-check we have actual changes after staging
 			if strings.TrimSpace(diff) == "" {
-				fmt.Println("✅ No actual changes found after staging")
+				logger.Success("No actual changes found after staging")
 				return
 			}
 		}
 
 		// Final check: ensure we have meaningful diff content
 		if len(strings.TrimSpace(diff)) < 10 {
-			fmt.Println("✅ No meaningful changes to commit")
+			logger.Success("No meaningful changes to commit")
 			return
 		}
 
-		fmt.Println("🔍 Analyzing changes...")
+		logger.Info("Analyzing changes...")
 
 		// Generate commit message using Ollama
 		message, err := generateCommitMessage(diff)
 		if err != nil {
-			fmt.Printf("❌ Error generating commit message: %v\n", err)
-			os.Exit(1)
+			logger.Fatal("Error generating commit message: %v", err)
 		}
 
 		// Display generated message
-		fmt.Println("\n📝 Generated Commit Message:")
-		fmt.Printf("Message: %s\n", message.Message)
-		fmt.Println()
+		logger.Println("\n📝 Generated Commit Message:")
+		logger.Printf("Message: %s\n\n", message.Message)
 
 		// Ask user for confirmation
 		if !askForConfirmation() {
-			fmt.Println("❌ Commit cancelled by user")
+			logger.Error("Commit cancelled by user")
 			return
 		}
 
 		// Commit the changes
 		if err := git.CommitChanges(message.Message); err != nil {
-			fmt.Printf("❌ Error committing changes: %v\n", err)
-			os.Exit(1)
+			logger.Fatal("Error committing changes: %v", err)
 		}
 
-		fmt.Println("✅ Changes committed successfully!")
+		logger.Success("Changes committed successfully!")
 	},
 }
 
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
-		os.Exit(1)
+		logger.Fatal("Command failed: %v", err)
 	}
 }
 
@@ -152,17 +144,12 @@ Rules:
 - Begin your message with a short summary of your changes (up to 80 characters as a guideline). 
 - Separate it from the following body by including a blank line. 
 - The body of your message should provide detailed answers to the following questions:
-	- How does it differ from the previous implementation? 
-- Use the imperative, present tense («change», not «changed» or «changes») to be consistent with generated messages from commands like git merge
-- NO prefixes like "feat:" or "fix:"
-- NO explanatory text
-- NO quotes
-- Be concise and specific without to much detail
+  * Why is this change being made?
+  * How does it address the issue?
+  * Any side effects or other important information?
 
 Git diff:
-%s
-
-COMMIT MESSAGE:`, diff)
+%s`, diff)
 
 	reqBody, err := json.Marshal(OllamaRequest{
 		Model:  "qwen2.5-coder:7b",
@@ -191,7 +178,7 @@ COMMIT MESSAGE:`, diff)
 
 func askForConfirmation() bool {
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Do you want to commit with this message? [y/N] ")
+	logger.Printf("Do you want to commit with this message? [y/N] ")
 	text, _ := reader.ReadString('\n')
 	text = strings.TrimSpace(strings.ToLower(text))
 	return text == "y" || text == "yes"
@@ -210,7 +197,9 @@ func initConfig() {
 	} else {
 		// Find home directory.
 		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
+		if err != nil {
+			logger.Fatal("Failed to get home directory: %v", err)
+		}
 
 		// Search config in home directory with name ".kommit" (without extension).
 		viper.AddConfigPath(home)
@@ -222,6 +211,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+		logger.Info("Using config file: %s", viper.ConfigFileUsed())
 	}
 }
