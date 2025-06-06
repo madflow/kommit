@@ -139,23 +139,20 @@ func generateCommitMessage(diff string) (*CommitMessage, error) {
 		diff = diff[:maxDiffLength] + "\n... (truncated)"
 	}
 
+	// Get configuration
+	cfg := config.Get()
+
+	// Build the prompt using the rules from config
 	prompt := fmt.Sprintf(`You are a git commit message generator. Analyze the git diff and respond with ONLY the commit message.
 
 Rules:
-	- Begin the message with a short summary of your changes (up to 80 characters as a guideline). 
-	- Capitalization and Punctuation: Capitalize the first word in the sentence and do not end in punctuation.
-  - Separate it from the following body by including a blank line. 
-	- The body of your message should provide a more detailed answers how the changes differ from the previous implementation.
-	- Use the imperative, present tense («change», not «changed» or «changes») to be consistent with generated messages from commands like git merge.
-	-  Be direct, try to eliminate filler words and phrases in these sentences (examples: though, maybe, I think, kind of). 
-
-
+%s
 
 Git diff:
-%s`, diff)
+%s`, cfg.Rules, diff)
 
 	reqBody, err := json.Marshal(OllamaRequest{
-		Model:  "qwen2.5-coder:7b",
+		Model:  cfg.Ollama.Model,
 		Prompt: prompt,
 		Stream: false,
 	})
@@ -163,7 +160,8 @@ Git diff:
 		return nil, fmt.Errorf("error creating request: %v", err)
 	}
 
-	resp, err := http.Post("http://localhost:11434/api/generate", "application/json", bytes.NewBuffer(reqBody))
+	// Use server URL from config
+	resp, err := http.Post(cfg.Ollama.ServerURL, "application/json", bytes.NewBuffer(reqBody))
 	if err != nil {
 		return nil, fmt.Errorf("error making request to Ollama: %v", err)
 	}

@@ -1,0 +1,26 @@
+# Kommit Configuration Example
+# Place this file in one of these locations:
+# - $XDG_CONFIG_HOME/kommit/config.yaml
+# - $HOME/.config/kommit/config.yaml
+# - $HOME/.kommit.yaml
+
+# Ollama API configuration
+ollama:
+  # URL of the Ollama API server
+  server_url: "http://localhost:11434/api/generate"
+  # Model to use for generating commit messages
+  model: "qwen2.5-coder:7b"
+
+# Rules for generating commit messages (be creative and funny!)
+rules: |
+  - Start with an emoji that best represents the nature of these changes (e.g., 🐛, ✨, 🚀, 🔥, 🧪, 🎨, 🚧, 💩, 🚑️, 🍻)
+  - Write the first line as if a pirate explaining the changes (e.g., "Arrr, I be fixin' the treasure map parser")
+  - In the body, include:
+    * What was broken (if anything) in pirate terms
+    * How you fixed it (or made it worse)
+    * Any sacrifices made to the code gods
+    * A fun fact about octopuses (they're nature's perfect commit message writers)
+  - End with a dramatic movie quote that somehow relates to the changes
+  - If in doubt, blame it on a cosmic ray or a mischievous squirrel
+  - Bonus points for making your future self laugh when reading this in 6 months
+  - Remember: if the tests pass, it's probably fine (probably)
