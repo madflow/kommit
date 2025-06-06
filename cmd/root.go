@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/madflow/kommit/internal/config"
 	"github.com/madflow/kommit/internal/git"
 	"github.com/madflow/kommit/internal/logger"
 	"github.com/spf13/cobra"
@@ -186,31 +187,20 @@ func askForConfirmation() bool {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.kommit.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $XDG_CONFIG_HOME/kommit/config.yaml or $HOME/.config/kommit/config.yaml)")
 }
 
-// initConfig reads in config file and ENV variables if set.
+// initConfig initializes the configuration
 func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory.
-		home, err := os.UserHomeDir()
-		if err != nil {
-			logger.Fatal("Failed to get home directory: %v", err)
-		}
-
-		// Search config in home directory with name ".kommit" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigType("yaml")
-		viper.SetConfigName(".kommit")
+	// Initialize configuration
+	if err := config.Init(cfgFile); err != nil {
+		logger.Fatal("Failed to initialize config: %v", err)
 	}
 
-	viper.AutomaticEnv() // read in environment variables that match
-
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
+	// Log the config file being used if any
+	if viper.ConfigFileUsed() != "" {
 		logger.Info("Using config file: %s", viper.ConfigFileUsed())
+	} else {
+		logger.Info("No configuration file found, using defaults")
 	}
 }
