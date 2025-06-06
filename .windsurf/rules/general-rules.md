@@ -4,6 +4,13 @@ trigger: always_on
 
 # General Rules
 
+## General
+
+- **Do not change the default model**: "qwen2.5-coder:7b"
+- **Do not change the default prompt text**
+- **Make only changes, which are crucial for the task**
+- **Do not add or change non code-related text, unless special instructions are given**
+
 ## Repository Structure
 
 - **Commands in `cmd/`**: All CLI commands go in `cmd/` directory, business logic goes in `internal/`
