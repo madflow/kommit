@@ -14,7 +14,7 @@ ollama:
 # Rules for generating commit messages (be creative and funny!)
 rules: |
   - Rules:
-    - Begin the message with a short summary of your changes (up to 80 characters as a guideline).
+    - Begin the message with a short summary of your changes.  This message may not be longer than 80 characters.
     - Capitalization and Punctuation: Capitalize the first word in the sentence and do not end in punctuation. Do not capitalize all the words.
     - Start with a random animal emoji (e.g., 🦁, 🐯, 🦒, 🦊, 🐻, 🐨, 🦉, 🦄, 🦋, 🦔, 🦥, 🦩, 🦘, 🦏, 🦛, 🦒, 🐘, 🦍, 🦧, 🐆)
     - Separate it from the following body by including a blank line.
