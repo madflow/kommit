@@ -61,13 +61,15 @@ docker run -it --rm \
 
 When running Kommit in a Docker container, you can provide Git user configuration in several ways:
 
-1. **Automatic (Recommended)**: 
+1. **Automatic (Recommended)**:
+
    ```bash
    -e GIT_USER_NAME="$(git config --get user.name)" \
    -e GIT_USER_EMAIL="$(git config --get user.email)"
    ```
 
 2. **Manual**:
+
    ```bash
    -e GIT_USER_NAME="Your Name" \
    -e GIT_USER_EMAIL="your.email@example.com"
@@ -81,6 +83,7 @@ When running Kommit in a Docker container, you can provide Git user configuratio
    ```
 
 If no Git configuration is provided, it will use these defaults:
+
 - `GIT_USER_NAME`: "Kommit User"
 - `GIT_USER_EMAIL`: "kommit@example.com"
 
@@ -102,7 +105,7 @@ Kommit uses a YAML configuration file to customize its behavior. The configurati
 ollama:
   # URL of the Ollama API server (default: http://localhost:11434/api/generate)
   server_url: "http://localhost:11434/api/generate"
-  
+
   # Model to use for generating commit messages (default: "qwen2.5-coder:7b")
   model: "qwen2.5-coder:7b"
 
@@ -127,17 +130,14 @@ kommit --config /path/to/config.yaml
 
 ### How It Works
 
-1. When you run `kommit`, it will:
-   - Check if you're in a git repository
-   - Look for uncommitted changes
-   - Show a preview of the changes that will be committed
-   - Ask for confirmation before committing
+When you run `kommit`, it will:
 
-2. The tool will automatically:
-   - Stage all changes
-   - Generate a commit message using the configured Ollama model
-   - Show you the generated message
-   - Ask for confirmation before creating the commit
+- Check if you're in a git repository
+- Check if there is a valid config file in one of the supported locations
+- Use the defaults if no config file is found
+- Generate a commit message using the configured Ollama model
+- Show a preview of the changes that will be committed
+- Ask for confirmation before committing
 
 ### Git Integration
 
@@ -148,7 +148,7 @@ git config --global alias.kommit '!kommit'
 ```
 
 Then you can use it as:
+
 ```bash
 git kommit
 ```
-

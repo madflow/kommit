@@ -5,29 +5,12 @@ import (
 	"strings"
 )
 
-func IsGitRepo() bool {
-	cmd := exec.Command("git", "rev-parse", "--git-dir")
-	return cmd.Run() == nil
-}
+// execCommand is defined as a variable so it can be mocked in tests
+var execCommand = exec.Command
 
-func HasChangesToCommit() (bool, error) {
-	// Check for staged changes
-	cmd := exec.Command("git", "diff", "--cached", "--quiet")
-	if err := cmd.Run(); err == nil {
-		// No staged changes, check for unstaged changes
-		cmd = exec.Command("git", "diff", "--quiet")
-		if err := cmd.Run(); err == nil {
-			// Check for untracked files
-			cmd = exec.Command("git", "ls-files", "--others", "--exclude-standard")
-			output, err := cmd.Output()
-			if err != nil {
-				return false, err
-			}
-			return strings.TrimSpace(string(output)) != "", nil
-		}
-		return true, nil // Has unstaged changes
-	}
-	return true, nil // Has staged changes
+func IsGitRepo() bool {
+	cmd := execCommand("git", "rev-parse", "--git-dir")
+	return cmd.Run() == nil
 }
 
 func GetGitStatus() (string, error) {
@@ -50,6 +33,31 @@ func GetGitDiff() (string, error) {
 	}
 
 	return string(output), err
+}
+
+// HasStagedChanges checks if there are any staged changes in the git repository.
+// It returns true if there are staged changes, false otherwise.
+// If there is an error running the git command, it returns false and the error.
+func HasStagedChanges() (bool, error) {
+	// Use execCommand to allow mocking in tests
+	cmd := execCommand("git", "diff-index", "--cached", "HEAD", "--")
+	output, err := cmd.Output()
+	if err != nil {
+		// If HEAD doesn't exist yet (new repository), check if there are any files in the index
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 128 {
+			// Try to list files in the index directly
+			cmd = execCommand("git", "ls-files", "--cached", "--error-unmatch", ".")
+			_, err := cmd.Output()
+			if err == nil {
+				return true, nil // Files are staged but no HEAD yet
+			}
+			return false, nil // No files in index
+		}
+		return false, err
+	}
+
+	// If there are staged changes, there will be output lines
+	return strings.TrimSpace(string(output)) != "", nil
 }
 
 func StageAllChanges() error {

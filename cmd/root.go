@@ -33,7 +33,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		// Check if there are any changes to commit
-		hasChanges, err := git.HasChangesToCommit()
+		hasChanges, err := git.HasStagedChanges()
 		if err != nil {
 			logger.Fatal("Error checking for changes: %v", err)
 		}
@@ -57,31 +57,6 @@ var rootCmd = &cobra.Command{
 		diff, err := git.GetGitDiff()
 		if err != nil {
 			logger.Fatal("Error getting git diff: %v", err)
-		}
-
-		if strings.TrimSpace(diff) == "" {
-			logger.Info("No staged changes found. Staging all changes...")
-			if err := git.StageAllChanges(); err != nil {
-				logger.Fatal("Error staging changes: %v", err)
-			}
-
-			// Get diff again after staging
-			diff, err = git.GetGitDiff()
-			if err != nil {
-				logger.Fatal("Error getting git diff after staging: %v", err)
-			}
-
-			// Double-check we have actual changes after staging
-			if strings.TrimSpace(diff) == "" {
-				logger.Success("No actual changes found after staging")
-				return
-			}
-		}
-
-		// Final check: ensure we have meaningful diff content
-		if len(strings.TrimSpace(diff)) < 10 {
-			logger.Success("No meaningful changes to commit")
-			return
 		}
 
 		logger.Info("Analyzing changes...")
@@ -122,8 +97,6 @@ func Execute() {
 		logger.Fatal("Command failed: %v", err)
 	}
 }
-
-
 
 func askForConfirmation() bool {
 	reader := bufio.NewReader(os.Stdin)
