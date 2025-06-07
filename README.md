@@ -10,23 +10,52 @@
 # Build the image
 docker build -t madflow/kommit .
 
-# Basic usage
-docker run -it --rm -v $PWD:/workdir madflow/kommit [command] [args...]
+# Basic usage with Git configuration
+docker run -it --rm \
+  -v $PWD:/workdir \
+  -e GIT_USER_NAME="Your Name" \
+  -e GIT_USER_EMAIL="your.email@example.com" \
+  madflow/kommit [command] [args...]
 
 # With Ollama running on host (Linux/macOS)
 docker run -it --rm \
   -v $PWD:/workdir \
   --network=host \
   -e OLLAMA_HOST=host.docker.internal \
+  -e GIT_USER_NAME="Your Name" \
+  -e GIT_USER_EMAIL="your.email@example.com" \
   madflow/kommit [command] [args...]
 
 # With explicit Ollama host (Windows/Linux/macOS)
 docker run -it --rm \
   -v $PWD:/workdir \
   -e OLLAMA_HOST=host.docker.internal \
+  -e GIT_USER_NAME="Your Name" \
+  -e GIT_USER_EMAIL="your.email@example.com" \
   --add-host=host.docker.internal:host-gateway \
   madflow/kommit [command] [args...]
+
+# Using environment file for configuration (create a .env file with your settings)
+# .env file:
+# GIT_USER_NAME="Your Name"
+# GIT_USER_EMAIL="your.email@example.com"
+# OLLAMA_HOST=host.docker.internal
+
+docker run -it --rm \
+  -v $PWD:/workdir \
+  --env-file .env \
+  --add-host=host.docker.internal:host-gateway \
+  madflow/kommit
 ```
+
+#### Git Configuration in Docker
+
+When running Kommit in a Docker container, you need to provide Git user configuration through environment variables:
+
+- `GIT_USER_NAME`: Your Git username (default: "Kommit User")
+- `GIT_USER_EMAIL`: Your Git email (default: "kommit@example.com")
+
+These will be automatically configured when the container starts, allowing Git operations to work correctly within the container.
 
 ## Usage
 
