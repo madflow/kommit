@@ -35,27 +35,54 @@ docker run -it --rm \
   --add-host=host.docker.internal:host-gateway \
   madflow/kommit [command] [args...]
 
-# Using environment file for configuration (create a .env file with your settings)
-# .env file:
-# GIT_USER_NAME="Your Name"
-# GIT_USER_EMAIL="your.email@example.com"
-# OLLAMA_HOST=host.docker.internal
+# Using automatic Git config from host
+docker run -it --rm \
+  -v $PWD:/workdir \
+  --network=host \
+  -e GIT_USER_NAME="$(git config --get user.name)" \
+  -e GIT_USER_EMAIL="$(git config --get user.email)" \
+  -e OLLAMA_HOST=host.docker.internal \
+  --add-host=host.docker.internal:host-gateway \
+  madflow/kommit
+
+# Using environment file with automatic Git config
+echo "GIT_USER_NAME=$(git config --get user.name)" > .kommit.env
+echo "GIT_USER_EMAIL=$(git config --get user.email)" >> .kommit.env
+echo "OLLAMA_HOST=host.docker.internal" >> .kommit.env
 
 docker run -it --rm \
   -v $PWD:/workdir \
-  --env-file .env \
+  --env-file .kommit.env \
   --add-host=host.docker.internal:host-gateway \
   madflow/kommit
 ```
 
 #### Git Configuration in Docker
 
-When running Kommit in a Docker container, you need to provide Git user configuration through environment variables:
+When running Kommit in a Docker container, you can provide Git user configuration in several ways:
 
-- `GIT_USER_NAME`: Your Git username (default: "Kommit User")
-- `GIT_USER_EMAIL`: Your Git email (default: "kommit@example.com")
+1. **Automatic (Recommended)**: 
+   ```bash
+   -e GIT_USER_NAME="$(git config --get user.name)" \
+   -e GIT_USER_EMAIL="$(git config --get user.email)"
+   ```
 
-These will be automatically configured when the container starts, allowing Git operations to work correctly within the container.
+2. **Manual**:
+   ```bash
+   -e GIT_USER_NAME="Your Name" \
+   -e GIT_USER_EMAIL="your.email@example.com"
+   ```
+
+3. **Via .env file**:
+   ```bash
+   echo "GIT_USER_NAME=$(git config --get user.name)" > .kommit.env
+   echo "GIT_USER_EMAIL=$(git config --get user.email)" >> .kommit.env
+   docker run --env-file .kommit.env ...
+   ```
+
+If no Git configuration is provided, it will use these defaults:
+- `GIT_USER_NAME`: "Kommit User"
+- `GIT_USER_EMAIL`: "kommit@example.com"
 
 ## Usage
 
