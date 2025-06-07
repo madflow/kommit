@@ -11,13 +11,13 @@ import (
 // Config holds the application configuration
 type Config struct {
 	Ollama OllamaConfig `mapstructure:"ollama"`
-	Rules  string      `mapstructure:"rules"`
+	Rules  string       `mapstructure:"rules"`
 }
 
 // OllamaConfig holds configuration for the Ollama API
 type OllamaConfig struct {
 	ServerURL string `mapstructure:"server_url"`
-	Model    string `mapstructure:"model"`
+	Model     string `mapstructure:"model"`
 }
 
 // DefaultConfig returns the default configuration
@@ -25,7 +25,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		Ollama: OllamaConfig{
 			ServerURL: "http://localhost:11434/api/generate",
-			Model:    "qwen2.5-coder:7b",
+			Model:     "qwen2.5-coder:7b",
 		},
 		Rules: `- Begin the message with a short summary of your changes (up to 80 characters as a guideline).
   - Capitalization and Punctuation: Capitalize the first word in the sentence and do not end in punctuation.
@@ -47,10 +47,8 @@ const (
 	ConfigFileExt = "yaml"
 )
 
-var (
-	// appConfig holds the loaded configuration
-	appConfig *Config
-)
+// appConfig holds the loaded configuration
+var appConfig *Config
 
 // readAndUnmarshalConfig reads the current config file and unmarshals it into appConfig
 func readAndUnmarshalConfig() error {

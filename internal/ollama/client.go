@@ -12,7 +12,7 @@ import (
 // Client represents an Ollama API client
 type Client struct {
 	BaseURL string
-	Model  string
+	Model   string
 }
 
 // Request represents a request to the Ollama API
@@ -32,7 +32,7 @@ type Response struct {
 func NewClient(cfg *config.OllamaConfig) *Client {
 	return &Client{
 		BaseURL: cfg.ServerURL,
-		Model:  cfg.Model,
+		Model:   cfg.Model,
 	}
 }
 
