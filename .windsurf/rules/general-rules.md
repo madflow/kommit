@@ -39,6 +39,7 @@ trigger: always_on
 - **Test internal packages**: Write unit tests for all business logic in `internal/` packages
 - **Table-driven tests**: Use table-driven tests for multiple test cases with different inputs
 - **Document exported functions**: Add comments to all exported functions starting with function name
+- **Do not use external 3rd-party testing frameworks**: Only use built-in `testing` package
 
 ## Git Operations & Output
 
