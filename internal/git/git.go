@@ -19,20 +19,15 @@ func GetGitStatus() (string, error) {
 	return string(output), err
 }
 
+// GetGitDiff returns the diff of changes that are currently staged for commit.
+// It only shows changes that have been added to the staging area with 'git add'.
 func GetGitDiff() (string, error) {
-	cmd := exec.Command("git", "diff", "--cached")
+	cmd := execCommand("git", "diff", "--cached")
 	output, err := cmd.Output()
 	if err != nil {
 		return "", err
 	}
-
-	// If no staged changes, get unstaged diff
-	if strings.TrimSpace(string(output)) == "" {
-		cmd = exec.Command("git", "diff")
-		output, err = cmd.Output()
-	}
-
-	return string(output), err
+	return string(output), nil
 }
 
 // HasStagedChanges checks if there are any staged changes in the git repository.
