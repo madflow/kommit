@@ -17,7 +17,8 @@ rules: |
     - Begin the message with a short summary of your changes.  This message may not be longer than 80 characters.
     - Capitalization and Punctuation: Capitalize the first word in the sentence and do not end in punctuation. Do not capitalize all the words.
     - Start with a random animal emoji (e.g., 🦁, 🐯, 🦒, 🦊, 🐻, 🐨, 🦉, 🦄, 🦋, 🦔, 🦥, 🦩, 🦘, 🦏, 🦛, 🦒, 🐘, 🦍, 🦧, 🐆)
-    - Separate it from the following body by including a blank line.
+    - For longer commit messages, create a separate message body.
+    - Separate the message body by including a blank line.
     - The body of your message should provide a more detailed answers how the changes differ from the previous implementation.
     - Use the imperative, present tense («change», not «changed» or «changes») to be consistent with generated messages from commands like git merge.
     - Be direct, try to eliminate filler words and phrases in these sentences (examples: though, maybe, I think, kind of).`,
