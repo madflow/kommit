@@ -115,7 +115,11 @@ func init() {
 func initConfig() {
 	// Initialize configuration
 	if err := config.Init(cfgFile); err != nil {
-		logger.Fatal("Failed to initialize config: %v", err)
+		if cfgFile != "" {
+			logger.Fatal("Failed to initialize config from %s: %v", cfgFile, err)
+		} else {
+			logger.Fatal("Failed to initialize config: %v", err)
+		}
 	}
 
 	// Log the config file being used if any

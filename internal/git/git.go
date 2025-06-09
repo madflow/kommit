@@ -61,6 +61,25 @@ func StageAllChanges() error {
 }
 
 func CommitChanges(message string) error {
-	cmd := exec.Command("git", "commit", "-m", message)
+	cmd := execCommand("git", "commit", "-m", message)
 	return cmd.Run()
+}
+
+// GetGitDir returns the absolute path to the root directory of the current git repository.
+// Returns an empty string if not in a git repository.
+func GetGitDir() (string, error) {
+	// First try to get the git directory to check if we're in a git repo
+	cmd := execCommand("git", "rev-parse", "--absolute-git-dir")
+	_, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	
+	// Now get the root directory of the repository
+	cmd = execCommand("git", "rev-parse", "--show-toplevel")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(output)), nil
 }

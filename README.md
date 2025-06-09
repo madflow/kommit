@@ -94,9 +94,12 @@ If no Git configuration is provided, it will use these defaults:
 Kommit uses a YAML configuration file to customize its behavior. The configuration file is automatically loaded from one of these locations (in order of priority):
 
 1. `$PWD/.kommit.yaml`
-2. `$XDG_CONFIG_HOME/kommit/config.yaml`
-3. `$HOME/.config/kommit/config.yaml`
-4. `$HOME/.kommit.yaml`
+2. `$GIT_DIR/.konfig.yaml` (if inside a git repository)
+3. `$XDG_CONFIG_HOME/kommit/config.yaml`
+4. `$HOME/.config/kommit/config.yaml`
+5. `$HOME/.kommit.yaml`
+
+> **Note**: The `$GIT_DIR` location is particularly useful for repository-specific configurations that should be shared with all contributors.
 
 #### Configuration Options
 

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/madflow/kommit/internal/git"
 	"github.com/spf13/viper"
 )
 
@@ -27,9 +28,12 @@ func DefaultConfig() *Config {
 			ServerURL: "http://localhost:11434/api/generate",
 			Model:     "qwen2.5-coder:7b",
 		},
-		Rules: `- Begin the message with a short summary of your changes (up to 80 characters as a guideline).
+		Rules: `
+	- Begin the message with a short summary of your changes (up to 80 characters as a guideline).
+	- Do not use any emoji or markdown the commit message.
   - Capitalization and Punctuation: Capitalize the first word in the sentence and do not end in punctuation.
-  - Separate it from the following body by including a blank line.
+  - For longer commit messages, create a separate message body.
+  - Separate the message body by including a blank line.
   - The body of your message should provide a more detailed answers how the changes differ from the previous implementation.
   - Use the imperative, present tense («change», not «changed» or «changes») to be consistent with generated messages from commands like git merge.
   - Be direct, try to eliminate filler words and phrases in these sentences (examples: though, maybe, I think, kind of).`,
@@ -37,29 +41,32 @@ func DefaultConfig() *Config {
 }
 
 const (
-	// AppName is the name of the application
-	AppName = "kommit"
-	// ConfigFileName is the name of the config file (without extension)
-	ConfigFileName = "config"
-	// LegacyConfigFileName is the name of the config file in the current directory
-	LegacyConfigFileName = ".kommit"
-	// ConfigFileExt is the extension for the config file
-	ConfigFileExt = "yaml"
+	AppName                  = "kommit"
+	ConfigFileName           = "config"
+	StandaloneConfigFileName = ".kommit"
+	ConfigFileExt            = "yaml"
 )
 
-// appConfig holds the loaded configuration
 var appConfig *Config
 
-// readAndUnmarshalConfig reads the current config file and unmarshals it into appConfig
 func readAndUnmarshalConfig() error {
-	if err := viper.ReadInConfig(); err != nil {
-		return err
+	// Try to read the config file
+	err := viper.ReadInConfig()
+	if err != nil {
+		return err // Return the original error to handle it in the caller
 	}
 
-	// Unmarshal the config
+	// Get the config file path for better error reporting
+	configFile := viper.ConfigFileUsed()
+	if configFile == "" {
+		configFile = "(unknown file)"
+	}
+
+	// If we get here, we successfully read a config file
+	// Now unmarshal it into our config struct
 	appConfig = &Config{}
 	if err := viper.Unmarshal(appConfig); err != nil {
-		return fmt.Errorf("error unmarshaling config: %w", err)
+		return fmt.Errorf("error parsing %s: %w", configFile, err)
 	}
 	return nil
 }
@@ -83,13 +90,13 @@ func Init(configFile string) error {
 
 	// First try to load .kommit.yaml from current directory
 	if pwd, err := os.Getwd(); err == nil {
-		legacyConfig := filepath.Join(pwd, LegacyConfigFileName+"."+ConfigFileExt)
-		if _, err := os.Stat(legacyConfig); err == nil {
-			viper.SetConfigFile(legacyConfig)
-			if err := readAndUnmarshalConfig(); err != nil {
-				return fmt.Errorf("error loading config from %s: %w", legacyConfig, err)
+		standaloneConfig := filepath.Join(pwd, StandaloneConfigFileName+"."+ConfigFileExt)
+		if _, err := os.Stat(standaloneConfig); err == nil {
+			viper.SetConfigFile(standaloneConfig)
+			if err := readAndUnmarshalConfig(); err == nil {
+				return nil
 			}
-			return nil
+			// Continue to next config source if there's an error reading this one
 		}
 	}
 
@@ -103,18 +110,23 @@ func Init(configFile string) error {
 
 	// Try to read the config
 	if err := readAndUnmarshalConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return err
+		// If no config file is found, use defaults
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			appConfig = DefaultConfig()
+			return nil
 		}
+		// For any other error (including YAML parse errors), return it
+		// The error already contains the file path from readAndUnmarshalConfig
+		return err
 	}
 
-	// Read in environment variables that match
+	// If we get here, we successfully loaded a config file
+	// Now apply environment variables on top of the loaded config
 	viper.AutomaticEnv()
 
-	// Unmarshal the config
-	appConfig = &Config{}
+	// Apply environment variable overrides
 	if err := viper.Unmarshal(appConfig); err != nil {
-		return err
+		return fmt.Errorf("error applying environment overrides: %w", err)
 	}
 
 	return nil
@@ -131,15 +143,21 @@ func Get() *Config {
 // getConfigDirs returns a list of directories to search for configuration files
 // in order of preference:
 // 1. $PWD (for .kommit.yaml)
-// 2. $XDG_CONFIG_HOME/kommit (for config.yaml)
-// 3. $HOME/.config/kommit (for config.yaml)
-// 4. $HOME (for .kommit.yaml)
+// 2. $GIT_DIR (for .konfig.yaml) - if inside a git repository
+// 3. $XDG_CONFIG_HOME/kommit (for config.yaml)
+// 4. $HOME/.config/kommit (for config.yaml)
+// 5. $HOME (for .kommit.yaml)
 func getConfigDirs() []string {
 	var dirs []string
 
 	// 1. Current working directory (for .kommit.yaml)
 	if pwd, err := os.Getwd(); err == nil {
 		dirs = append(dirs, pwd)
+	}
+
+	// 2. Git directory (for .konfig.yaml)
+	if gitDir, err := git.GetGitDir(); err == nil && gitDir != "" {
+		dirs = append(dirs, gitDir)
 	}
 
 	// 2. XDG config home (for config.yaml)
@@ -158,13 +176,15 @@ func getConfigDirs() []string {
 		dirs = append(dirs, home)
 	}
 
+	fmt.Printf("Config directories: %v\n", dirs)
+
 	return dirs
 }
 
 // GetString wraps viper.GetString
 type Getter interface {
 	GetString(key string) string
-	GetStringMap(key string) map[string]interface{}
+	GetStringMap(key string) map[string]any
 	GetStringMapString(key string) map[string]string
 	GetStringSlice(key string) []string
 	GetInt(key string) int

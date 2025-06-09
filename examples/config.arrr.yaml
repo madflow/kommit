@@ -1,6 +1,7 @@
 # Kommit Configuration Example
 # Place this file in one of these locations:
 # - $PWD/.kommit.yaml
+# - $GIT_DIR/.konfig.yaml (if in a git repository)
 # - $XDG_CONFIG_HOME/kommit/config.yaml
 # - $HOME/.config/kommit/config.yaml
 # - $HOME/.kommit.yaml
