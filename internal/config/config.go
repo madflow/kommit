@@ -29,9 +29,21 @@ func DefaultConfig() *Config {
 			Model:     "qwen2.5-coder:7b",
 		},
 		Rules: `
+		Expected output format:
+		[First line: summary under 80 characters]
+
+		[Optional body paragraphs if needed]
+
+		Do not deviate from this format.
+
 	- Begin the message with a short summary of your changes (up to 80 characters as a guideline).
-	- Do not use any emoji or markdown the commit message.
-  - Capitalization and Punctuation: Capitalize the first word in the sentence and do not end in punctuation.
+	- Do not use any emoji or markdown in the commit message.
+	- Do not use any formatting characters including asterisks (*), underscores (_), backticks, or any other markup symbols.
+	- Write in plain text only - no bold, italic, or code formatting.
+	- Use simple, direct language without any text decoration or emphasis markers.
+	- Write as if you're typing in a plain text editor with no formatting options.
+	- Do not wrap words or phrases in any special characters.
+	- Avoid using quotation marks around technical terms unless they are part of the actual code/file names.
   - For longer commit messages, create a separate message body.
   - Separate the message body by including a blank line.
   - The body of your message should provide a more detailed answers how the changes differ from the previous implementation.

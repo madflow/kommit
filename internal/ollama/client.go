@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/madflow/kommit/internal/config"
+	"github.com/madflow/kommit/internal/git"
 )
 
 // Client represents an Ollama API client
@@ -37,21 +39,44 @@ func NewClient(cfg *config.OllamaConfig) *Client {
 }
 
 // GenerateCommitMessage generates a commit message using the Ollama API
-func (c *Client) GenerateCommitMessage(diff, rules string) (string, error) {
+func (c *Client) GenerateCommitMessage(diff, rules string, repoCtx *git.RepoContext) (string, error) {
 	// Truncate diff if it's too long (Ollama has token limits)
 	maxDiffLength := 4000
 	if len(diff) > maxDiffLength {
 		diff = diff[:maxDiffLength] + "\n... (truncated)"
 	}
 
-	// Build the prompt using the rules
-	prompt := fmt.Sprintf(`You are a git commit message generator. Analyze the git diff and respond with ONLY the commit message.
+	// Build the prompt using the rules and repository context
+	prompt := fmt.Sprintf(`
+You are a git commit message generator. 
+Output ONLY the commit message in plain text format with no additional text, headers, or formatting.
 
-Rules:
+Repository Context:
+- Branch: %s
+- Files changed: %d
+- Changed files:%s
+
+IMPORTANT Rules:
 %s
 
 Git diff:
-%s`, rules, diff)
+%s`,
+		repoCtx.BranchName,
+		repoCtx.FilesChanged,
+		func() string {
+			if len(repoCtx.FileChanges) == 0 {
+				return " (none)"
+			}
+			var files []string
+			for _, change := range repoCtx.FileChanges {
+				files = append(files, fmt.Sprintf("\n  - [%s] %s (%s)", change.Status, change.FilePath, change.FileType))
+			}
+			return strings.Join(files, "")
+		}(),
+		rules,
+		diff)
+
+	fmt.Println(prompt)
 
 	reqBody, err := json.Marshal(Request{
 		Model:  c.Model,

@@ -43,17 +43,32 @@ var rootCmd = &cobra.Command{
 			return
 		}
 
-		// Check git status
-		status, err := git.GetGitStatus()
+		// Get repository context
+		repoCtx, err := git.GetRepoContext()
 		if err != nil {
-			logger.Fatal("Error getting git status: %v", err)
+			logger.Fatal("Error getting repository context: %v", err)
 		}
 
-		logger.Println("📊 Git Status:")
-		logger.Println(status)
+		// Display repository context
+		logger.Println("📊 Repository Context:")
+		logger.Printf("Branch: %s\n", repoCtx.BranchName)
+		logger.Printf("Files changed: %d\n", repoCtx.FilesChanged)
+
+		if repoCtx.FilesChanged > 0 {
+			logger.Println("\n📝 Change Summary:")
+			logger.Println(repoCtx.ChangeSummary)
+
+			if len(repoCtx.FileChanges) > 0 {
+				logger.Println("\n📋 File Changes:")
+				for _, change := range repoCtx.FileChanges {
+					logger.Printf("[%s] %s (%s)\n", change.Status, change.FilePath, change.FileType)
+				}
+			}
+		}
+
 		logger.Println()
 
-		// Get git diff
+		// Get git diff for AI analysis
 		diff, err := git.GetGitDiff()
 		if err != nil {
 			logger.Fatal("Error getting git diff: %v", err)
@@ -64,7 +79,7 @@ var rootCmd = &cobra.Command{
 		// Generate commit message using Ollama
 		cfg := config.Get()
 		ollamaClient := ollama.NewClient(&cfg.Ollama)
-		messageText, err := ollamaClient.GenerateCommitMessage(diff, cfg.Rules)
+		messageText, err := ollamaClient.GenerateCommitMessage(diff, cfg.Rules, repoCtx)
 		if err != nil {
 			logger.Fatal("Error generating commit message: %v", err)
 		}
@@ -74,7 +89,7 @@ var rootCmd = &cobra.Command{
 
 		// Display generated message
 		logger.Println("\n📝 Generated Commit Message:")
-		logger.Printf("Message: %s\n\n", message.Message)
+		logger.Printf("%s\n\n", message.Message)
 
 		// Ask user for confirmation
 		if !askForConfirmation() {
