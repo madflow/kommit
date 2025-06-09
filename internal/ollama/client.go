@@ -76,8 +76,6 @@ Git diff:
 		rules,
 		diff)
 
-	fmt.Println(prompt)
-
 	reqBody, err := json.Marshal(Request{
 		Model:  c.Model,
 		Prompt: prompt,
