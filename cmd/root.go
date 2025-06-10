@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/madflow/kommit/internal/config"
 	"github.com/madflow/kommit/internal/git"
@@ -31,10 +30,6 @@ func yoloCommit(message string) {
 	if err := git.CommitChanges(message); err != nil {
 		logger.Fatal("Error committing changes: %v", err)
 	}
-
-	// Wait for 5 seconds before pushing
-	logger.Info("⏳ Waiting 5 seconds before pushing...")
-	time.Sleep(5 * time.Second)
 
 	// Push to remote
 	if err := git.PushCurrentBranch(); err != nil {
