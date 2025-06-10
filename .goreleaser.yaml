@@ -45,6 +45,18 @@ changelog:
       - "^docs:"
       - "^test:"
 
+homebrew_casks:
+  - name: kommit 
+    repository:
+      owner: madflow
+      name: homebrew-kommit
+    homepage: https://github.com/madflow/kommit
+    conflicts:
+      - formula: kommit
+    commit_author:
+      name: madflow
+    skip_upload: auto
+
 release:
   footer: >-
 
