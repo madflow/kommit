@@ -129,6 +129,11 @@ kommit
 
 # Run with a specific config file
 kommit --config /path/to/config.yaml
+
+# YOLO mode: Automatically stage, commit, and push changes (no confirmation)
+kommit --yolo
+# or use the short flag
+kommit -y
 ```
 
 ### How It Works
