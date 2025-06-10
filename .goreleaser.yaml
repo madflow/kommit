@@ -1,9 +1,20 @@
+# This is an example .goreleaser.yml file with some sensible defaults.
+# Make sure to check the documentation at https://goreleaser.com
+
+# The lines below are called `modelines`. See `:help modeline`
+# Feel free to remove those if you don't want/need to use them.
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+
+version: 2
+
 before:
   hooks:
     # You may remove this if you don't use go modules.
     - go mod tidy
     # you may remove this if you don't need go generate
     - go generate ./...
+
 builds:
   - env:
       - CGO_ENABLED=0
@@ -11,21 +22,10 @@ builds:
       - linux
       - windows
       - darwin
-    goarch:
-      - "386"
-      - amd64
-      - arm
-      - arm64
-      - ppc64
-    goarm:
-      - "7"
-    ignore:
-      - goos: windows
-        goarch: arm
 
 archives:
-  - format: tar.gz
-    # this name template makes the OS and Arch compatible with the results of uname.
+  - formats: [tar.gz]
+    # this name template makes the OS and Arch compatible with the results of `uname`.
     name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
@@ -36,11 +36,8 @@ archives:
     # use zip for windows archives
     format_overrides:
       - goos: windows
-        format: zip
-checksum:
-  name_template: "checksums.txt"
-snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+        formats: [zip]
+
 changelog:
   sort: asc
   filters:
@@ -48,142 +45,9 @@ changelog:
       - "^docs:"
       - "^test:"
 
-brews:
-  - name: kommit
-    repository:
-      owner: madflow
-      name: homebrew-kommit
-    url_template: "https://github.com/madflow/kommit/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    folder: Formula
-    homepage: "https://github.com/madflow/kommit"
-    description: "git commit --yolo"
-    license: "MIT"
-    test: |
-      system "#{bin}/kommit"
-    install: |
-      bin.install "kommit"
-
-nfpms:
-  - formats:
-      - apk
-      - deb
-      - rpm
-      - archlinux
-    vendor: "kommit.localhost"
-    homepage: "https://github.com/madflow/kommit"
-    maintainer: "madflow"
-    description: "git commit --yolo"
-    license: "Unlicense"
-    file_name_template: "{{.ProjectName}}_{{.Version}}_{{.Os}}-{{.Arch}}"
-
-scoops:
-  - name: kommit
-    repository:
-      owner: madflow
-      name: scoop-bucket
-    description: "git commit --yolo"
-    homepage: "https://github.com/madflow/kommit"
-    license: Unlicense
-
-aurs:
-  - name: kommit
-
-    homepage: "https://github.com/madflow/kommit"
-
-    description: "Skate Ipsum is a tool for generating random skateboarding related text."
-
-    provides:
-      - kommit
-
-    conflicts:
-      - kommit
-
-    maintainers:
-      - "madflow"
-
-    license: "Unlicense"
-
-    private_key: "{{ .Env.AUR_KEY }}"
-
-    git_url: "ssh://aur@aur.archlinux.org/kommit-bin.git"
-
-    skip_upload: auto
-
-    package: |-
-      # bin
-      install -Dm755 "./kommit" "${pkgdir}/usr/bin/kommit"
-
-    commit_author:
-      name: Skate Ipsum Releaser
-      email: aur@kommit
-
 release:
-  footer: |
-    **Full Changelog**: https://github.com/madflow/kommit/compare/{{ .PreviousTag }}...{{ .Tag }}
+  footer: >-
 
-    ```
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMNOxddkXWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWOlc::cccdKMMMWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWkcldddddo::d0MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMWNKKXWMMMMMM0c:c:::lddo:.:KMWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMXxoc::coxXMMMNo;cloo:cddool::xXMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMWO::clllol:c0MWk:colllcodo;;lol;;dkxdxkKWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMKccdoolcool;cKKc:lloooddl,..;coc;:c::;''lKMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMO::olll:;lc;,cOl;ldddol;.....,ccccloddo:.;KMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMO:cllllccoc,;,:kxc:;,'......,;cccc;cddddl':XMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMO:clloddddc.'c;;ONK00o.....,:coollloddoclc':0WMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMk:lddddddl'..cd:,dNMMNx'..coooddddddoc'.cdl,'oXMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMNd;:lolc;...,odo:'dWMMWO'.codddddoc;'..'lddo;.;0WMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMW0d:'....'',ldl;.,0MMWd,::;,,,,'......:ddddo,.,0MMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMK:...,;;codo:..xWMO;:ddollccc'.''..,:llodl..;dollkXWMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMM0,.,lodddddo,.cXNl,odddddddo'.lc.'..':ll;';looc'.;0MMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMW0,.cdddddddl..xO;:ddddddddc...'cdoc:::::::odddo;.lNMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMWk',odoolcc:. ','cdddddddo,...cdo:;::cllccldl;ll.:XMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMWx';lcc:;;::;;;,,;;;:cccl:...cddo;;odoclodo:..co,,OWMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMK;,l:::cloolc::c:,';cccc;'..;odddo;,;clc:;....ldc.'xNMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMWX00XWMMMMMMMWo':::ldddddlccodoc;,;lodoc:,.,ldddl' .::....'cddo;..lXMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMWKxo:,,'lKMMMMMMK;'cldocc:::ccllodddoc::codooc,,cdl,..:Ol'...,::cc;...kMMMMMMMMMMMMMMMMMM
-    MMMMMMWXkdol::c;co,.lNMMMMM0'.ldocdOdlkOxcoo::loddolccllooc::,...,;:ol:;,;;,....lXMMMMMMMMMMMMMMMMMM
-    MMMNKxl:..:lddc:od;.;KMMMMM0,.;dldNWKKWWK0WKlldccddddl,..;odoc;,..;oddddddl,..;kNMMMMMMMMMMMMMMMMMMM
-    WKxoc:lo,'cllolldc..lNMMMMM0, ;dllOOlo0k:lOc,dk;.;coddo;.'ldddddl:;;cdddo:...lXMMMMMMMMMMMMMMMMMMMMM
-    Kl:oddddl::loddo:..:KMMMMMM0'.cdocc'...............'lddo;,oddddddddc;col,...;KMMMMMMMMMMMMMMMMMMMMMM
-    k;;cdddddddddo:'..oXMMMMMMNl.'oocld;................'lddo:cdddddddddc'''...,OWMMMMMMMMMMMMMMMMMMMMMM
-    K:,loddddddo:....;0MMMMMMWx..:dc,cd;.................,oddl;codddddddl.....cKWMMMMMMMMMMMMMMMMMMMMMMM
-    Wk';oddddddl,.....,kWMMNx:..;oo,.lo,..................cddd:',cddddddl'....xWMMMMMMMMMMMMMMMMMMMMMMMM
-    MWx,cddolc;'..';'...oKk;...'co;.'ol. .................:dddc..'ldddol;.....xWMMMMMMMMMMMMMMMMMMMMMMMM
-    MMWkcldoc:::clo:.....''..';lod,.:o;...................ldddc...cdddl;....cONMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMWO;;oddddol::clc,..;loodddd;.,,........'''........,odddc',lddddo;...cNMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMWd.cddddoloddddo,.cdddoc;,''',,,'',,,'...........lddddllodddddo;...,0MMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMK;'oddddddddddo;;ddddl...,,,,,,''............ .cdddddddddddddl,...,0MMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMWx',ldddddddddlcoddddoc'.....................':ddddddddddddddc...:0WMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMNo..;loddddoooddddddddlcc,.................:oddddddddddddddd:..cXMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMNo...:dddl:lddddddddolc;'''..............,odddddddddddddddo,..lNMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMWx'..,colcldddddddlo0klxXk':0x,,c'.''...:dddddddddddddddd:...cNMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMWKl....;ldddddddd::kkokXO:c0XldWk;x0:':odolldddddddddddl'. .kMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMW0l'..;oddddddoolllloddoooo:cxo':x:'cdc;,cddddddddddo;...cNMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMWXk:.,lddddl:looooooooooddolcc:ccodl'..;odddddddddc....;KMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMXl..cdddo:,''........,;;:looolc;....'lddddddddl'.....;xKWMMMMMMMMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMNd..;odoclc::::,................. .:ddddddddl,........';cldk0XWMMMMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMWO;..:lclccoollc,'..;cc:::'',,,;;:ldddddddc'..'loc;;,.......';cdOXWMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMNx,..,clll::llll:;lolcllcclllllccoddddo:'..;oddddddlc:::,'.....':oONMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMNx:..':clloool:coo:,;:clllllllllodoc'..'codddddddddddddoc:;'.....;dKMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMN0o;...,;:cclllloc,..',,,;;;;;,''..;codddddddddddddddddddolc;'...dWMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMN0dc'......':lddl:,,''''''''',:lddddddddddddddddddddddddddolc,lXMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWXOo,....'',;;:odoc::;;;;:coddddddddddddddddddddddddddddddcdNMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMXxc;,.....;cc;,;:cc;'',;:clddddddddddddddddddddddddddo:dNMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWWXkl;'.'cll:'.':ll:,''':lodolcloddddddddddddddddlc,,dXMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMNXKOc'':cc:,',;:cllooodol:::::looc:coddddddl,''.':kNMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMNd'...':c:,'',;:ccodddddocclool::cc:cloc;:,...,kWMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWXxc:,..,col::;;::ccccloddddddddl;;;:c,;olol:,;xNMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWNKko;,:ll:;,'..:c::cloddddd:...'';docOWWNKXWMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMXxc::cddoc,,:ldolodddo;,......,dO0KXNMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWXkc,;lddc;;;codddo;. .......;dxxkkxx0WMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMNk;.':lodl::lol,.;odo,.',,:0WWWWNkloKWMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMNkc,,;:cc;;;':;;oOXXxllooONXdoONNkxOXW
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWXK0kkkxOkcxNd;lddx0OookNW0loXMMMMWM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWWMOl0WKkddONWMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMNKNMMMWKxoOWMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWK0WMMMW0kNMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM0lOWMMMMMMMMMMMMMMMMM
-    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMWXXMMMMMMMMMMMMMMMMMM
-    ```
+    ---
+
+    Released by [GoReleaser](https://github.com/goreleaser/goreleaser).
