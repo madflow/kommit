@@ -4,6 +4,12 @@
 
 ## Installation
 
+### macOS
+
+```bash
+brew install --no-quarantine madflow/kommit/kommit
+```
+
 ### Docker
 
 ```bash
