@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/madflow/kommit/internal/config"
 	"github.com/madflow/kommit/internal/git"
@@ -26,15 +27,14 @@ type CommitMessage struct {
 func yoloCommit(message string) {
 	logger.Info("🚀 YOLO mode enabled - Automatically committing and pushing changes")
 
-	// Stage all changes
-	if err := git.AddAll(); err != nil {
-		logger.Fatal("Error staging changes: %v", err)
-	}
-
-	// Commit the changes
+	// Commit the changes (changes already staged in the main flow)
 	if err := git.CommitChanges(message); err != nil {
 		logger.Fatal("Error committing changes: %v", err)
 	}
+
+	// Wait for 5 seconds before pushing
+	logger.Info("⏳ Waiting 5 seconds before pushing...")
+	time.Sleep(5 * time.Second)
 
 	// Push to remote
 	if err := git.PushCurrentBranch(); err != nil {
@@ -57,16 +57,15 @@ var rootCmd = &cobra.Command{
 			logger.Fatal("Not in a git repository")
 		}
 
-		// In yolo mode, we'll stage all changes, so we need to check for any changes at all
-		var hasChanges bool
-		var err error
-
+		// In yolo mode, stage all changes first, then check for staged changes
 		if yolo {
-			hasChanges, err = git.HasAnyChanges()
-		} else {
-			hasChanges, err = git.HasStagedChanges()
+			if err := git.AddAll(); err != nil {
+				logger.Fatal("Error staging changes: %v", err)
+			}
 		}
 
+		// Check for staged changes to commit
+		hasChanges, err := git.HasStagedChanges()
 		if err != nil {
 			logger.Fatal("Error checking for changes: %v", err)
 		}
