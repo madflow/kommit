@@ -25,7 +25,7 @@ type CommitMessage struct {
 // yoloCommit performs an automatic commit and push without confirmation
 func yoloCommit(message string) {
 	logger.Info("🚀 YOLO mode enabled - Automatically committing and pushing changes")
-	
+
 	// Stage all changes
 	if err := git.AddAll(); err != nil {
 		logger.Fatal("Error staging changes: %v", err)

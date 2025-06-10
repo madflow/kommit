@@ -74,7 +74,7 @@ func GetGitDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	// Now get the root directory of the repository
 	cmd = execCommand("git", "rev-parse", "--show-toplevel")
 	output, err := cmd.Output()

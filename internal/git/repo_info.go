@@ -8,23 +8,23 @@ import (
 
 // RepoContext contains information about the current git repository context
 type RepoContext struct {
-	BranchName string
-	FilesChanged int
+	BranchName    string
+	FilesChanged  int
 	ChangeSummary string
-	FileChanges []FileChange
+	FileChanges   []FileChange
 }
 
 // FileChange represents a single changed file in the repository
 type FileChange struct {
-	Status    string
-	FilePath  string
-	FileType  string
+	Status   string
+	FilePath string
+	FileType string
 }
 
 // GetRepoContext returns the current repository context including branch, changes, etc.
 func GetRepoContext() (*RepoContext, error) {
 	ctx := &RepoContext{}
-	
+
 	// Get current branch name
 	branchCmd := exec.Command("git", "branch", "--show-current")
 	branchOut, err := branchCmd.Output()
@@ -73,7 +73,7 @@ func GetRepoContext() (*RepoContext, error) {
 		}
 		status := parts[0]
 		filePath := parts[1]
-		
+
 		// Get file extension
 		fileType := ""
 		if dotIndex := strings.LastIndex(filePath, "."); dotIndex != -1 && dotIndex < len(filePath)-1 {
