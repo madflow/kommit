@@ -13,10 +13,35 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
+var (
+	cfgFile string
+	yolo    bool
+)
 
 type CommitMessage struct {
 	Message string
+}
+
+// yoloCommit performs an automatic commit and push without confirmation
+func yoloCommit(message string) {
+	logger.Info("🚀 YOLO mode enabled - Automatically committing and pushing changes")
+	
+	// Stage all changes
+	if err := git.AddAll(); err != nil {
+		logger.Fatal("Error staging changes: %v", err)
+	}
+
+	// Commit the changes
+	if err := git.CommitChanges(message); err != nil {
+		logger.Fatal("Error committing changes: %v", err)
+	}
+
+	// Push to remote
+	if err := git.PushCurrentBranch(); err != nil {
+		logger.Fatal("Error pushing changes: %v", err)
+	}
+
+	logger.Success("Changes committed and pushed successfully!")
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -32,8 +57,16 @@ var rootCmd = &cobra.Command{
 			logger.Fatal("Not in a git repository")
 		}
 
-		// Check if there are any changes to commit
-		hasChanges, err := git.HasStagedChanges()
+		// In yolo mode, we'll stage all changes, so we need to check for any changes at all
+		var hasChanges bool
+		var err error
+
+		if yolo {
+			hasChanges, err = git.HasAnyChanges()
+		} else {
+			hasChanges, err = git.HasStagedChanges()
+		}
+
 		if err != nil {
 			logger.Fatal("Error checking for changes: %v", err)
 		}
@@ -91,18 +124,22 @@ var rootCmd = &cobra.Command{
 		logger.Println("\n📝 Generated Commit Message:")
 		logger.Printf("%s\n\n", message.Message)
 
-		// Ask user for confirmation
-		if !askForConfirmation() {
-			logger.Error("Commit cancelled by user")
-			return
-		}
+		if yolo {
+			yoloCommit(message.Message)
+		} else {
+			// Ask user for confirmation in non-yolo mode
+			if !askForConfirmation() {
+				logger.Error("Commit cancelled by user")
+				return
+			}
 
-		// Commit the changes
-		if err := git.CommitChanges(message.Message); err != nil {
-			logger.Fatal("Error committing changes: %v", err)
-		}
+			// Commit the changes
+			if err := git.CommitChanges(message.Message); err != nil {
+				logger.Fatal("Error committing changes: %v", err)
+			}
 
-		logger.Success("Changes committed successfully!")
+			logger.Success("Changes committed successfully!")
+		}
 	},
 }
 
@@ -124,6 +161,7 @@ func askForConfirmation() bool {
 func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $XDG_CONFIG_HOME/kommit/config.yaml or $HOME/.config/kommit/config.yaml)")
+	rootCmd.Flags().BoolVarP(&yolo, "yolo", "y", false, "Automatically stage all changes, commit, and push without confirmation")
 }
 
 // initConfig initializes the configuration

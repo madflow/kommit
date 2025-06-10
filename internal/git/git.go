@@ -83,3 +83,37 @@ func GetGitDir() (string, error) {
 	}
 	return strings.TrimSpace(string(output)), nil
 }
+
+// AddAll stages all changes in the working directory for commit.
+func AddAll() error {
+	cmd := execCommand("git", "add", ".")
+	return cmd.Run()
+}
+
+// HasAnyChanges checks if there are any changes in the working directory (staged or unstaged).
+func HasAnyChanges() (bool, error) {
+	// Check for any changes in the working tree (unstaged changes)
+	cmd := execCommand("git", "diff", "--quiet")
+	unstagedChanges := cmd.Run() != nil
+
+	// Check for any staged changes
+	cmd = execCommand("git", "diff", "--cached", "--quiet")
+	stagedChanges := cmd.Run() != nil
+
+	return unstagedChanges || stagedChanges, nil
+}
+
+// PushCurrentBranch pushes the current branch to its remote tracking branch.
+func PushCurrentBranch() error {
+	// First, get the current branch name
+	cmd := execCommand("git", "rev-parse", "--abbrev-ref", "HEAD")
+	output, err := cmd.Output()
+	if err != nil {
+		return err
+	}
+	branch := strings.TrimSpace(string(output))
+
+	// Push the current branch to its upstream branch
+	pushCmd := execCommand("git", "push", "--set-upstream", "origin", branch)
+	return pushCmd.Run()
+}
