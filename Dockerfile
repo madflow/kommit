@@ -18,7 +18,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o kommit .
 
 # Final stage
-FROM alpine:3.19
+FROM alpine:3.22
 
 # Install bash and git (required for git operations)
 RUN apk --no-cache add bash git
