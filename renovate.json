@@ -1,0 +1,12 @@
+{
+  "assignees": ["madflow"],
+  "extends": ["config:recommended"],
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "automerge": true,
+      "matchDepTypes": ["devDependencies"]
+    }
+  ],
+  "timezone": "Europe/Berlin"
+}
