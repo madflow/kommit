@@ -2,6 +2,27 @@
 
 > Git commits for the rest of us
 
+## Table of Contents
+
+- [Requirements](#requirements)
+- [Installation](#installation)
+  - [macOS](#macos)
+  - [Docker](#docker)
+    - [Git Configuration in Docker](#git-configuration-in-docker)
+- [Configuration](#configuration)
+  - [Configuration Options](#configuration-options)
+- [Usage](#usage)
+  - [Basic Usage](#basic-usage)
+  - [How It Works](#how-it-works)
+  - [Commit Message Editing](#commit-message-editing)
+  - [Git Integration](#git-integration)
+
+## Requirements
+
+- [Ollama](https://ollama.ai/) - Required for generating commit messages. Make sure Ollama is installed and running before using Kommit.
+  - Download and install from: https://ollama.ai/download
+  - Start the Ollama server: `ollama serve`
+
 ## Installation
 
 ### macOS
@@ -151,7 +172,20 @@ When you run `kommit`, it will:
 - Use the defaults if no config file is found
 - Generate a commit message using the configured Ollama model
 - Show a preview of the changes that will be committed
-- Ask for confirmation before committing
+- Ask for confirmation before committing with the following options:
+  - `y` or `yes`: Accept the generated message and commit
+  - `e` or `edit`: Open your default editor to modify the commit message
+  - `n` or `no` (or press Enter): Cancel the commit
+
+### Commit Message Editing
+
+When you choose to edit the commit message (`e` or `edit`):
+1. Your default text editor will open with the generated commit message
+   - The editor is determined by the `$EDITOR` environment variable, or defaults to `vi`
+2. Make your changes to the commit message and save the file
+3. After closing the editor, you'll see the updated message and be prompted again
+4. You can continue editing as many times as needed until you're satisfied
+5. Choose `y` to commit with the current message or `n` to cancel
 
 ### Git Integration
 
