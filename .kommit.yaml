@@ -36,8 +36,7 @@ rules: |
   2. Do not capitalize the first letter of the description
   3. No dot (.) at the end of the description
   4. Keep the subject line under 72 characters
-  5. Reference issues and pull requests in the footer when applicable
-  6. Consider starting the commit message with an applicable emoji
+  5. Consider starting the commit message with an applicable emoji
   
   Example:
   feat(auth): add login functionality
