@@ -100,40 +100,22 @@ func Init(configFile string) error {
 		return nil
 	}
 
-	// First try to load .kommit.yaml from current directory
-	if pwd, err := os.Getwd(); err == nil {
-		standaloneConfig := filepath.Join(pwd, StandaloneConfigFileName+"."+ConfigFileExt)
-		if _, err := os.Stat(standaloneConfig); err == nil {
-			viper.SetConfigFile(standaloneConfig)
+	// Try each potential config file in order of preference
+	for _, configPath := range getConfigFilePaths() {
+		if _, err := os.Stat(configPath); err == nil {
+			viper.SetConfigFile(configPath)
 			if err := readAndUnmarshalConfig(); err == nil {
+				// Successfully loaded a config file
 				return nil
 			}
 			// Continue to next config source if there's an error reading this one
 		}
 	}
 
-	// Set up search paths for config.yaml
-	viper.SetConfigName(ConfigFileName)
-	viper.SetConfigType(ConfigFileExt)
-	configDirs := getConfigDirs()
-	for _, dir := range configDirs {
-		viper.AddConfigPath(dir)
-	}
+	// If we get here, no config file was found
+	appConfig = DefaultConfig()
 
-	// Try to read the config
-	if err := readAndUnmarshalConfig(); err != nil {
-		// If no config file is found, use defaults
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			appConfig = DefaultConfig()
-			return nil
-		}
-		// For any other error (including YAML parse errors), return it
-		// The error already contains the file path from readAndUnmarshalConfig
-		return err
-	}
-
-	// If we get here, we successfully loaded a config file
-	// Now apply environment variables on top of the loaded config
+	// Apply environment variables on top of the default config
 	viper.AutomaticEnv()
 
 	// Apply environment variable overrides
@@ -152,45 +134,40 @@ func Get() *Config {
 	return appConfig
 }
 
-// getConfigDirs returns a list of directories to search for configuration files
-// in order of preference:
-// 1. $PWD (for .kommit.yaml)
-// 2. $GIT_DIR (for .konfig.yaml) - if inside a git repository
-// 3. $XDG_CONFIG_HOME/kommit (for config.yaml)
-// 4. $HOME/.config/kommit (for config.yaml)
-// 5. $HOME (for .kommit.yaml)
-func getConfigDirs() []string {
-	var dirs []string
+// getConfigFilePaths returns a list of potential config file paths in order of preference:
+// 1. $PWD/.kommit.yaml
+// 2. $GIT_DIR/.kommit.yaml (if inside a git repository)
+// 3. $XDG_CONFIG_HOME/kommit/config.yaml
+// 4. $HOME/.config/kommit/config.yaml
+// 5. $HOME/.kommit.yaml
+func getConfigFilePaths() []string {
+	var paths []string
 
-	// 1. Current working directory (for .kommit.yaml)
+	// 1. Current working directory
 	if pwd, err := os.Getwd(); err == nil {
-		dirs = append(dirs, pwd)
+		paths = append(paths, filepath.Join(pwd, StandaloneConfigFileName+"."+ConfigFileExt))
 	}
 
-	// 2. Git directory (for .konfig.yaml)
+	// 2. Git directory
 	if gitDir, err := git.GetGitDir(); err == nil && gitDir != "" {
-		dirs = append(dirs, gitDir)
+		paths = append(paths, filepath.Join(gitDir, StandaloneConfigFileName+"."+ConfigFileExt))
 	}
 
-	// 2. XDG config home (for config.yaml)
+	// 3. XDG config home
 	if xdgConfigHome := os.Getenv("XDG_CONFIG_HOME"); xdgConfigHome != "" {
-		dirs = append(dirs, filepath.Join(xdgConfigHome, AppName))
+		paths = append(paths, filepath.Join(xdgConfigHome, AppName, ConfigFileName+"."+ConfigFileExt))
 	}
 
-	// 3. Standard XDG config directory (for config.yaml)
+	// 4. Standard XDG config directory
 	home, err := os.UserHomeDir()
 	if err == nil {
-		dirs = append(dirs, filepath.Join(home, ".config", AppName))
+		paths = append(paths, filepath.Join(home, ".config", AppName, ConfigFileName+"."+ConfigFileExt))
+
+		// 5. Home directory
+		paths = append(paths, filepath.Join(home, StandaloneConfigFileName+"."+ConfigFileExt))
 	}
 
-	// 4. Home directory (for .kommit.yaml)
-	if home != "" {
-		dirs = append(dirs, home)
-	}
-
-	fmt.Printf("Config directories: %v\n", dirs)
-
-	return dirs
+	return paths
 }
 
 // GetString wraps viper.GetString
