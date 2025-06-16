@@ -122,57 +122,60 @@ var rootCmd = &cobra.Command{
 		if yolo {
 			yoloCommit(message.Message)
 		} else {
-			// Ask user for confirmation in non-yolo mode
-			switch askForConfirmation() {
-			case "no":
-				logger.Error("Commit cancelled by user")
-				return
-			case "edit":
-				tempFile, err := os.CreateTemp("", "kommit-*.md")
-				if err != nil {
-					logger.Fatal("Error creating temporary file: %v", err)
-				}
-				defer os.Remove(tempFile.Name())
-
-				// Write the current message to the temp file
-				if _, err := tempFile.WriteString(message.Message); err != nil {
-					tempFile.Close()
-					logger.Fatal("Error writing to temporary file: %v", err)
-				}
-				tempFile.Close()
-
-				// Open the editor
-				editor := os.Getenv("EDITOR")
-				if editor == "" {
-					editor = "vi" // Default to vi if no editor is set
-				}
-
-				// Execute the editor
-				cmd := exec.Command(editor, tempFile.Name())
-				cmd.Stdin = os.Stdin
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-
-				if err := cmd.Run(); err != nil {
-					logger.Fatal("Error opening editor: %v", err)
-				}
-
-				// Read the edited message
-				editedMessage, err := os.ReadFile(tempFile.Name())
-				if err != nil {
-					logger.Fatal("Error reading edited message: %v", err)
-				}
-
-				message.Message = strings.TrimSpace(string(editedMessage))
-				logger.Println("\n📝 Updated Commit Message:")
-				logger.Printf("%s\n\n", message.Message)
-
-				// Ask for confirmation again after editing
-				if askForConfirmation() != "yes" {
-					logger.Error("Commit cancelled by user after editing")
+			// Loop until user confirms or cancels
+			for {
+				switch askForConfirmation() {
+				case "no":
+					logger.Error("Commit cancelled by user")
 					return
+				case "edit":
+					tempFile, err := os.CreateTemp("", "kommit-*.md")
+					if err != nil {
+						logger.Fatal("Error creating temporary file: %v", err)
+					}
+					defer os.Remove(tempFile.Name())
+
+					// Write the current message to the temp file
+					if _, err := tempFile.WriteString(message.Message); err != nil {
+						tempFile.Close()
+						logger.Fatal("Error writing to temporary file: %v", err)
+					}
+					tempFile.Close()
+
+					// Open the editor
+					editor := os.Getenv("EDITOR")
+					if editor == "" {
+						editor = "vi" // Default to vi if no editor is set
+					}
+
+					// Execute the editor
+					cmd := exec.Command(editor, tempFile.Name())
+					cmd.Stdin = os.Stdin
+					cmd.Stdout = os.Stdout
+					cmd.Stderr = os.Stderr
+
+					if err := cmd.Run(); err != nil {
+						logger.Fatal("Error opening editor: %v", err)
+					}
+
+					// Read the edited message
+					editedMessage, err := os.ReadFile(tempFile.Name())
+					if err != nil {
+						logger.Fatal("Error reading edited message: %v", err)
+					}
+
+					message.Message = strings.TrimSpace(string(editedMessage))
+					logger.Println("\n📝 Updated Commit Message:")
+					logger.Printf("%s\n\n", message.Message)
+					continue // Go back to the confirmation prompt
+
+				case "yes":
+					// Break out of the loop to proceed with the commit
+					goto commit
 				}
 			}
+
+		commit:
 
 			// Commit the changes
 			if err := git.CommitChanges(message.Message); err != nil {
