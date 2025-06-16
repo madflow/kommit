@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/madflow/kommit/internal/config"
@@ -122,9 +123,55 @@ var rootCmd = &cobra.Command{
 			yoloCommit(message.Message)
 		} else {
 			// Ask user for confirmation in non-yolo mode
-			if !askForConfirmation() {
+			switch askForConfirmation() {
+			case "no":
 				logger.Error("Commit cancelled by user")
 				return
+			case "edit":
+				tempFile, err := os.CreateTemp("", "kommit-*.md")
+				if err != nil {
+					logger.Fatal("Error creating temporary file: %v", err)
+				}
+				defer os.Remove(tempFile.Name())
+
+				// Write the current message to the temp file
+				if _, err := tempFile.WriteString(message.Message); err != nil {
+					tempFile.Close()
+					logger.Fatal("Error writing to temporary file: %v", err)
+				}
+				tempFile.Close()
+
+				// Open the editor
+				editor := os.Getenv("EDITOR")
+				if editor == "" {
+					editor = "vi" // Default to vi if no editor is set
+				}
+
+				// Execute the editor
+				cmd := exec.Command(editor, tempFile.Name())
+				cmd.Stdin = os.Stdin
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+
+				if err := cmd.Run(); err != nil {
+					logger.Fatal("Error opening editor: %v", err)
+				}
+
+				// Read the edited message
+				editedMessage, err := os.ReadFile(tempFile.Name())
+				if err != nil {
+					logger.Fatal("Error reading edited message: %v", err)
+				}
+
+				message.Message = strings.TrimSpace(string(editedMessage))
+				logger.Println("\n📝 Updated Commit Message:")
+				logger.Printf("%s\n\n", message.Message)
+
+				// Ask for confirmation again after editing
+				if askForConfirmation() != "yes" {
+					logger.Error("Commit cancelled by user after editing")
+					return
+				}
 			}
 
 			// Commit the changes
@@ -144,12 +191,25 @@ func Execute() {
 	}
 }
 
-func askForConfirmation() bool {
+// askForConfirmation prompts the user to confirm the commit message
+// Returns: "yes", "edit", or "no"
+func askForConfirmation() string {
 	reader := bufio.NewReader(os.Stdin)
-	logger.Printf("Do you want to commit with this message? [y/N] ")
-	text, _ := reader.ReadString('\n')
-	text = strings.TrimSpace(strings.ToLower(text))
-	return text == "y" || text == "yes"
+	for {
+		logger.Printf("Do you want to commit with this message? [y/e/N] ")
+		text, _ := reader.ReadString('\n')
+		text = strings.TrimSpace(strings.ToLower(text))
+		switch text {
+		case "y", "yes":
+			return "yes"
+		case "e", "edit":
+			return "edit"
+		case "", "n", "no":
+			return "no"
+		default:
+			logger.Printf("Please enter 'y' for yes, 'e' to edit, or 'N' for no\n")
+		}
+	}
 }
 
 func init() {
