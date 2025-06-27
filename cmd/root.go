@@ -17,6 +17,7 @@ import (
 var (
 	cfgFile string
 	yolo    bool
+	add     bool
 )
 
 type CommitMessage struct {
@@ -51,6 +52,13 @@ var rootCmd = &cobra.Command{
 		// Check if we're in a git repository
 		if !git.IsGitRepo() {
 			logger.Fatal("Not in a git repository")
+		}
+
+		// If add flag is set, stage all changes
+		if add {
+			if err := git.AddAll(); err != nil {
+				logger.Fatal("Error staging changes: %v", err)
+			}
 		}
 
 		// In yolo mode, stage all changes first, then check for staged changes
@@ -219,6 +227,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $XDG_CONFIG_HOME/kommit/config.yaml or $HOME/.config/kommit/config.yaml)")
 	rootCmd.Flags().BoolVarP(&yolo, "yolo", "y", false, "Automatically stage all changes, commit, and push without confirmation")
+	rootCmd.Flags().BoolVarP(&add, "add", "a", false, "Stage all changes before committing")
 }
 
 // initConfig initializes the configuration
