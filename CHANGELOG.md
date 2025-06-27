@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/madflow/kommit/compare/v0.3.0...v0.4.0) (2025-06-27)
+
+
+### Features
+
+* update goreleaser configuration to include full changelog URL and custom footer ([800b334](https://github.com/madflow/kommit/commit/800b334728bfa4b52deaa22672a2ae594742536c))
+
 ## [0.3.0](https://github.com/madflow/kommit/compare/v0.2.0...v0.3.0) (2025-06-27)
 
 
