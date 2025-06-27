@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/madflow/kommit/compare/v0.2.0...v0.3.0) (2025-06-27)
+
+
+### Features
+
+* update usage instructions for basic and advanced options ([1015ddb](https://github.com/madflow/kommit/commit/1015ddbf82a9ad3d0867045f9cbb6a3bdedb6ed7))
+
 ## [0.2.0](https://github.com/madflow/kommit/compare/v0.1.0...v0.2.0) (2025-06-16)
 
 
