@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/madflow/kommit/compare/v0.4.1...v0.4.2) (2025-06-27)
+
+
+### Bug Fixes
+
+* **release:** fix goreleaser integration ([584c4c7](https://github.com/madflow/kommit/commit/584c4c7e0ed7289ba24e6234c6142fb8582ed04e))
+
 ## [0.4.1](https://github.com/madflow/kommit/compare/v0.4.0...v0.4.1) (2025-06-27)
 
 
