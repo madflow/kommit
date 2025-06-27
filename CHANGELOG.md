@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3](https://github.com/madflow/kommit/compare/v0.4.2...v0.4.3) (2025-06-27)
+
+
+### Bug Fixes
+
+* **workflow:** update GoReleaser action version and configuration ([4a97baf](https://github.com/madflow/kommit/commit/4a97baf1cbb001505f867670a66fa7ef7e172f5f))
+
 ## [0.4.2](https://github.com/madflow/kommit/compare/v0.4.1...v0.4.2) (2025-06-27)
 
 
