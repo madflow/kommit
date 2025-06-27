@@ -116,6 +116,36 @@ If no Git configuration is provided, it will use these defaults:
 
 ## Usage
 
+### Basic Usage
+
+```bash
+# Run kommit in the current git repository
+kommit
+
+# Stage all changes before committing
+kommit --add
+# or use the short flag
+kommit -a
+
+# Run with a specific config file
+kommit --config /path/to/config.yaml
+
+# YOLO mode: Automatically stage, commit, and push changes (no confirmation)
+kommit --yolo
+# or use the short flag
+kommit -y
+```
+
+### Options
+
+#### `--add` or `-a`
+
+This option automatically stages all changes in your Git repository before generating a commit message. It's equivalent to running `git add .` before `kommit`. Use this when you want to quickly commit all modified and new files without manually staging them.
+
+#### `--yolo` or `-y`
+
+This option automatically stages all changes, commits with the generated message, and pushes to the remote repository without any confirmation prompts. It's a "fire-and-forget" mode for when you trust the process completely.
+
 ### Configuration
 
 Kommit uses a YAML configuration file to customize its behavior. The configuration file is automatically loaded from one of these locations (in order of priority):
@@ -154,6 +184,11 @@ rules: |
 # Run kommit in the current git repository
 kommit
 
+# Stage all changes before committing
+kommit --add
+# or use the short flag
+kommit -a
+
 # Run with a specific config file
 kommit --config /path/to/config.yaml
 
@@ -162,6 +197,12 @@ kommit --yolo
 # or use the short flag
 kommit -y
 ```
+
+### Options
+
+#### `--add` or `-a`
+
+This option automatically stages all changes in your Git repository before generating a commit message. It's equivalent to running `git add .` before `kommit`. Use this when you want to quickly commit all modified and new files without manually staging them.
 
 ### How It Works
 
