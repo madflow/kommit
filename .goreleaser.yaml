@@ -61,10 +61,6 @@ release:
   footer: >-
 
     ---
-
-   **Full Changelog**: https://github.com/madflow/kommit/compare/{{ .PreviousTag }}...{{ .Tag }}
-
-
                       $$$                       
                       $   $                      
                       $$$                       
