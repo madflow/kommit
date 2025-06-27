@@ -26,9 +26,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install GoReleaser
-        uses: goreleaser/goreleaser-action@v5
-
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -40,5 +37,10 @@ jobs:
       - name: Test
         run: go test -v ./...
 
-      - name: Go releaser check
+      - name: Install GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          install-only: true
+      - name: Run GoReleaser check
         run: goreleaser check
+
