@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/madflow/kommit/compare/v0.4.0...v0.4.1) (2025-06-27)
+
+
+### Bug Fixes
+
+* **goreleaser:** remove unnecessary changelog footer ([a8287a0](https://github.com/madflow/kommit/commit/a8287a04d6c7b22ccc4b880cef395521881d44ec))
+
 ## [0.4.0](https://github.com/madflow/kommit/compare/v0.3.0...v0.4.0) (2025-06-27)
 
 
