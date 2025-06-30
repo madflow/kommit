@@ -38,7 +38,7 @@ func DefaultConfig() *Config {
 
 	- Begin the message with a short summary of your changes (up to 80 characters as a guideline).
 	- Do not use any emoji or markdown in the commit message.
-	- Do not use any formatting characters including asterisks (*), underscores (_), backticks, or any other markup symbols.
+	- Do not use any formatting characters including asterisks (*), underscores (_), backticks, brackets [] or any other markup symbols.
 	- Write in plain text only - no bold, italic, or code formatting.
 	- Use simple, direct language without any text decoration or emphasis markers.
 	- Write as if you're typing in a plain text editor with no formatting options.
