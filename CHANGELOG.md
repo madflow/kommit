@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.4](https://github.com/madflow/kommit/compare/v0.4.3...v0.4.4) (2025-06-30)
+
+
+### Bug Fixes
+
+* **config:** update message rules ([75738d9](https://github.com/madflow/kommit/commit/75738d996833de203682f6ab887f8f64b510f0fa))
+
 ## [0.4.3](https://github.com/madflow/kommit/compare/v0.4.2...v0.4.3) (2025-06-27)
 
 
