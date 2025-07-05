@@ -87,7 +87,7 @@ var rootCmd = &cobra.Command{
 
 		// Display repository context
 		logger.Println("📊 Repository Context:")
-		logger.Printf("Branch: %s\n", repoCtx.BranchName)
+		logger.Printf("Branch name: %s\n", repoCtx.BranchName)
 		logger.Printf("Files changed: %d\n", repoCtx.FilesChanged)
 
 		if repoCtx.FilesChanged > 0 {

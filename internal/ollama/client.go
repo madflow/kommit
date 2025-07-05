@@ -52,7 +52,7 @@ You are a git commit message generator.
 Output ONLY the commit message in plain text format with no additional text, headers, or formatting.
 
 Repository Context:
-- Branch: %s
+- Branch name: %s
 - Files changed: %d
 - Changed files:%s
 
