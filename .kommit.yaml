@@ -30,12 +30,15 @@ rules: |
   - perf: A code change that improves performance
   - test: Adding missing tests or correcting existing tests
   - chore: Changes to the build process or auxiliary tools and libraries
+
+  Branch Name Rules:
+    - When the current branch is in the format <type>/<scope>-<description>, the commit type should always be this type. The description can be omitted.
   
   Rules:
   1. Use the imperative, present tense ("add feature" not "added feature")
   2. Do not capitalize the first letter of the description
   3. No dot (.) at the end of the description
-  4. Keep the subject line under 72 characters
+  4. Keep the subject line under 80 characters
   5. Consider starting the commit message with an applicable emoji
   6. When only the README.md has been changed, use the "docs" type
   7. When only changes in .github folder have been made, use the "chore" type
