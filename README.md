@@ -2,6 +2,8 @@
 
 > Git commits for the rest of us
 
+`kommit` is a command-line tool that uses the power of AI to generate git commit messages for you. By analyzing the changes in your code, it creates descriptive and relevant commit messages, saving you time and effort. It is designed to work with Ollama to generate commit messages and is highly configurable via a configuration file. You can either accept the generated message as is, edit it to your liking, or use the "YOLO" mode to automatically commit and push your changes without confirmation.
+
 ## Table of Contents
 
 - [Requirements](#requirements)
