@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.5](https://github.com/madflow/kommit/compare/v0.4.4...v0.4.5) (2025-07-05)
+
+
+### Bug Fixes
+
+* **.kommit.yaml:** correct commit message guidance ([898fda3](https://github.com/madflow/kommit/commit/898fda3f4bc11afee1a5742e177d54d064f8d8c3))
+* correct branch display name ([fadf0c9](https://github.com/madflow/kommit/commit/fadf0c95d2e1e8a0cab27598b1421593f6942dd5))
+* update branch name rules and commit message guidelines ([13a98eb](https://github.com/madflow/kommit/commit/13a98eb0d53b46b2f5432bc033a736dba5b4004b))
+
 ## [0.4.4](https://github.com/madflow/kommit/compare/v0.4.3...v0.4.4) (2025-06-30)
 
 
