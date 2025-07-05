@@ -46,12 +46,17 @@ rules: |
   - The branch name is chore/docs-update
   - The commit type should be: "chore(docs): update documentation"
 
-  General Example:
+  General Examples:
   feat(auth): add login functionality
   
   - Implement JWT token generation on successful login
   - Add login form validation
   - Update authentication middleware
+
+  docs(readme):📚 updated usage instructions
+  
+  - Updated instrcutions on how to use the application
+  - Added usage examples
   
   Emoji Reference:
   ✨ feat: New feature
