@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/madflow/kommit/internal/config"
@@ -61,7 +60,7 @@ var branchCmd = &cobra.Command{
 			logger.Fatal("Error creating branch: %v", err)
 		}
 
-		logger.Success(fmt.Sprintf("Successfully created branch '%s'", branchName))
+		logger.Success("Successfully created branch '%s'", branchName)
 	},
 }
 
