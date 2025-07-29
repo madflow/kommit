@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/madflow/kommit/internal/config"
@@ -9,6 +10,17 @@ import (
 	"github.com/madflow/kommit/internal/ollama"
 	"github.com/spf13/cobra"
 )
+
+func sanitizeBranchName(branchName string) string {
+	branchName = strings.TrimSpace(branchName)
+	if len(branchName) > 50 {
+		branchName = branchName[:50]
+	}
+
+	reg := regexp.MustCompile("[^a-zA-Z0-9-_/]+")
+	branchName = reg.ReplaceAllString(branchName, "")
+	return branchName
+}
 
 var branchCmd = &cobra.Command{
 	Use:   "branch",
@@ -49,10 +61,7 @@ var branchCmd = &cobra.Command{
 			logger.Fatal("Error generating branch name: %v", err)
 		}
 
-		branchName = strings.TrimSpace(branchName)
-		if len(branchName) > 50 {
-			branchName = branchName[:50]
-		}
+		branchName = sanitizeBranchName(branchName)
 
 		logger.Info("Generated branch name: %s", branchName)
 
