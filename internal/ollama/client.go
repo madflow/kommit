@@ -112,6 +112,7 @@ func (c *Client) GenerateBranchName(diff string) (string, error) {
 	prompt := fmt.Sprintf(`
 You are a git branch name generator. 
 Output ONLY the branch name in plain text format with no additional text, headers, or formatting.
+The branch name should only contain alphanumeric characters and the symbols: -, _, /.
 
 Git diff:
 %s`, diff)
