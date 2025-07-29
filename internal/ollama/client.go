@@ -99,3 +99,43 @@ Git diff:
 
 	return ollamaResp.Response, nil
 }
+
+// GenerateBranchName generates a branch name using the Ollama API
+func (c *Client) GenerateBranchName(diff string) (string, error) {
+	// Truncate diff if it's too long (Ollama has token limits)
+	maxDiffLength := 4000
+	if len(diff) > maxDiffLength {
+		diff = diff[:maxDiffLength] + "\n... (truncated)"
+	}
+
+	// Build the prompt
+	prompt := fmt.Sprintf(`
+You are a git branch name generator. 
+Output ONLY the branch name in plain text format with no additional text, headers, or formatting.
+
+Git diff:
+%s`, diff)
+
+	reqBody, err := json.Marshal(Request{
+		Model:  c.Model,
+		Prompt: prompt,
+		Stream: false,
+	})
+	if err != nil {
+		return "", fmt.Errorf("error creating request: %v", err)
+	}
+
+	// Make the request
+	resp, err := http.Post(c.BaseURL, "application/json", bytes.NewBuffer(reqBody))
+	if err != nil {
+		return "", fmt.Errorf("error making request to Ollama: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var ollamaResp Response
+	if err := json.NewDecoder(resp.Body).Decode(&ollamaResp); err != nil {
+		return "", fmt.Errorf("error decoding response: %v", err)
+	}
+
+	return ollamaResp.Response, nil
+}

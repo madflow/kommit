@@ -117,3 +117,8 @@ func PushCurrentBranch() error {
 	pushCmd := execCommand("git", "push", "--set-upstream", "origin", branch)
 	return pushCmd.Run()
 }
+
+func CreateBranch(branchName string) error {
+	cmd := execCommand("git", "checkout", "-b", branchName)
+	return cmd.Run()
+}
