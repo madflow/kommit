@@ -140,6 +140,15 @@ kommit -y
 
 ### Options
 
+#### `branch`
+
+This subcommand generates a new Git branch name based on your current staged changes and creates the branch. It uses the configured Ollama model to analyze the diff and suggest a relevant branch name, ensuring it's no more than 50 characters long. This is useful for quickly creating feature or bugfix branches that reflect the work you're about to commit.
+
+Usage:
+```bash
+kommit branch
+```
+
 #### `--add` or `-a`
 
 This option automatically stages all changes in your Git repository before generating a commit message. It's equivalent to running `git add .` before `kommit`. Use this when you want to quickly commit all modified and new files without manually staging them.
