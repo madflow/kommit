@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/madflow/kommit/compare/v0.5.0...v0.5.1) (2025-07-29)
+
+
+### Bug Fixes
+
+* **cmd/branch.go:** sanitize branch names to conform to git standards ([f1240d5](https://github.com/madflow/kommit/commit/f1240d5acbceb404063a8a965ea32c1123c120f2))
+
 ## [0.5.0](https://github.com/madflow/kommit/compare/v0.4.5...v0.5.0) (2025-07-29)
 
 
