@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/madflow/kommit/compare/v0.4.5...v0.5.0) (2025-07-29)
+
+
+### Features
+
+* **cmd:** add branch command for generating branch names based on changes ([c77edb0](https://github.com/madflow/kommit/commit/c77edb02e9e8a690c4c0177c32df0985912ad909))
+
+
+### Bug Fixes
+
+* **branch:** remove redundant import and simplify log message ([93d61ff](https://github.com/madflow/kommit/commit/93d61ff0902ce31b1a631f845eb477d0942993c5))
+
 ## [0.4.5](https://github.com/madflow/kommit/compare/v0.4.4...v0.4.5) (2025-07-05)
 
 
