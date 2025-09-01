@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/madflow/kommit/compare/v0.5.1...v0.5.2) (2025-09-01)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/spf13/cobra to v1.10.0 ([#29](https://github.com/madflow/kommit/issues/29)) ([a891170](https://github.com/madflow/kommit/commit/a891170f185b2231cccef420a006dab6e32b4665))
+
 ## [0.5.1](https://github.com/madflow/kommit/compare/v0.5.0...v0.5.1) (2025-07-29)
 
 
