@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.4](https://github.com/madflow/kommit/compare/v0.5.3...v0.5.4) (2025-09-07)
+
+
+### Bug Fixes
+
+* **goreleaser:** remove deprecated conflicts_with formula ([976e0cd](https://github.com/madflow/kommit/commit/976e0cd2bd5647fc8b2ba51fee35ca6671a71f52))
+
 ## [0.5.3](https://github.com/madflow/kommit/compare/v0.5.2...v0.5.3) (2025-09-01)
 
 
