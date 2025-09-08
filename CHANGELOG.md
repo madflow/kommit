@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.5](https://github.com/madflow/kommit/compare/v0.5.4...v0.5.5) (2025-09-08)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/spf13/viper to v1.21.0 ([#37](https://github.com/madflow/kommit/issues/37)) ([9761661](https://github.com/madflow/kommit/commit/9761661d190eff780d3850e27daef170464f5fb8))
+
 ## [0.5.4](https://github.com/madflow/kommit/compare/v0.5.3...v0.5.4) (2025-09-07)
 
 
