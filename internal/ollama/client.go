@@ -53,7 +53,7 @@ Output ONLY the commit message in plain text format with no additional text, hea
 
 Repository Context:
 - Branch name: %s
-- Files changed: %d
+- Number of files changed: %d
 - Changed files:%s
 
 IMPORTANT Rules:
