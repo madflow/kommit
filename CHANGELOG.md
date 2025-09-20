@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.6](https://github.com/madflow/kommit/compare/v0.5.5...v0.5.6) (2025-09-20)
+
+
+### Bug Fixes
+
+* **config:** update default rule format ([0e66166](https://github.com/madflow/kommit/commit/0e661665a4790bef808e4072d9e0f7a686853d77))
+* **quarantine:** remove macOS quarantine attribute during release ([08d9288](https://github.com/madflow/kommit/commit/08d9288f1dbc6224258db1b5b6d5443df158dad4))
+
 ## [0.5.5](https://github.com/madflow/kommit/compare/v0.5.4...v0.5.5) (2025-09-08)
 
 
