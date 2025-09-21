@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -127,15 +128,41 @@ func createPullRequest(commitMessage string) {
 		prBody = ""
 	}
 
-	// Generate PR title using AI (max 120 characters)
-	prTitle, err := ollamaClient.GeneratePullRequestTitle(diff, repoCtx)
+	// Generate PR title using AI with configurable rules
+	prTitle, err := ollamaClient.GeneratePullRequestTitle(diff, cfg.PRTitleRules, repoCtx)
 	if err != nil {
 		logger.Error("Error generating PR title: %v", err)
 		logger.Info("Using commit message as title...")
-		// Fallback: use first line of commit message, truncated to 120 characters
+		// Fallback: use first line of commit message, truncated to reasonable length
 		prTitle = commitMessage
-		if len(prTitle) > 120 {
-			prTitle = prTitle[:117] + "..."
+		maxLength := 50 // Default fallback
+
+		// Try to extract max length from PR title rules if specified
+		if strings.Contains(cfg.PRTitleRules, "Maximum length:") {
+			parts := strings.Split(cfg.PRTitleRules, "Maximum length:")
+			if len(parts) > 1 {
+				lengthPart := strings.Split(parts[1], "characters")[0]
+				lengthStr := strings.TrimSpace(lengthPart)
+				if len(lengthStr) > 0 {
+					var numStr string
+					for _, char := range lengthStr {
+						if char >= '0' && char <= '9' {
+							numStr += string(char)
+						} else {
+							break
+						}
+					}
+					if numStr != "" {
+						if parsed, err := fmt.Sscanf(numStr, "%d", &maxLength); err != nil || parsed != 1 {
+							maxLength = 50 // Keep default on parse error
+						}
+					}
+				}
+			}
+		}
+
+		if len(prTitle) > maxLength {
+			prTitle = prTitle[:maxLength-3] + "..."
 		}
 	}
 

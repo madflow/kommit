@@ -57,3 +57,48 @@ rules: |
   ⚡ perf: Performance improvements
   ✅ test: Adding tests
   🔧 chore: Maintenance
+
+# Rules for generating pull request descriptions (conventional style)
+pr_rules: |
+  Expected output format:
+
+  ---
+  ## Summary
+  <1-3 bullet points>
+  ---
+
+  Do not deviate from this format.
+
+  - Create a professional summary for a pull request in the format "## Summary" followed by 1-3 bullet points.
+  - Each bullet point should highlight a key change or improvement made in this pull request.
+  - Focus on the business value and technical impact of the changes, not just what files were modified.
+  - Write in plain text only - no bold, italic, or code formatting except for the ## Summary header.
+  - Use clear, professional language that explains what was accomplished.
+  - Be specific about features added, bugs fixed, or improvements made.
+  - Follow conventional commit types when describing changes (feat, fix, docs, style, refactor, perf, test, chore).
+  - Avoid generic descriptions like "updated files" or "made changes".
+  - Keep bullet points concise but informative (aim for 1-2 lines each).
+  - Use the past tense for describing what was accomplished in this pull request.
+  - Focus on the user-facing or developer-facing benefits of the changes.
+  - Reference relevant issues or tickets when applicable.
+
+# Rules for generating pull request titles (conventional style)
+pr_title_rules: |
+  Expected output format:
+
+  ---
+  Brief descriptive title
+  ---
+
+  Do not deviate from this format.
+
+  - Create a clear and descriptive pull request title following conventional commit style.
+  - Maximum length: 72 characters (following conventional commit guidelines).
+  - Use conventional commit prefixes when appropriate (feat:, fix:, docs:, style:, refactor:, perf:, test:, chore:).
+  - Use imperative mood ("Add feature" not "Added feature" or "Adds feature").
+  - Be specific about what was changed or accomplished.
+  - Include scope in parentheses when relevant (e.g., "feat(auth): add login system").
+  - Do not end with a period.
+  - Focus on the primary change or most important aspect.
+  - Use lowercase for the description part (following conventional commits).
+  - Examples: "feat(auth): add user authentication system", "fix(parser): resolve memory leak", "docs: update API documentation".

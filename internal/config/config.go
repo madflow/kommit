@@ -11,9 +11,10 @@ import (
 
 // Config holds the application configuration
 type Config struct {
-	Ollama  OllamaConfig `mapstructure:"ollama"`
-	Rules   string       `mapstructure:"rules"`
-	PRRules string       `mapstructure:"pr_rules"`
+	Ollama       OllamaConfig `mapstructure:"ollama"`
+	Rules        string       `mapstructure:"rules"`
+	PRRules      string       `mapstructure:"pr_rules"`
+	PRTitleRules string       `mapstructure:"pr_title_rules"`
 }
 
 // OllamaConfig holds configuration for the Ollama API
@@ -73,6 +74,26 @@ func DefaultConfig() *Config {
 	- Keep bullet points concise but informative (aim for 1-2 lines each).
 	- Use the past tense for describing what was accomplished in this pull request.
 	- Focus on the user-facing or developer-facing benefits of the changes.`,
+		PRTitleRules: `
+		Expected output format:
+
+		---
+		Brief descriptive title
+		---
+
+		Do not deviate from this format.
+
+	- Create a concise and descriptive pull request title.
+	- Maximum length: 50 characters (aim for under 50 characters).
+	- Use imperative mood ("Add feature" not "Added feature" or "Adds feature").
+	- Start with a verb when possible (Add, Fix, Update, Remove, etc.).
+	- Be specific about what was changed or accomplished.
+	- Do not use conventional commit prefixes (feat:, fix:, etc.) unless explicitly requested.
+	- Avoid articles (a, an, the) when possible to save space.
+	- Do not end with a period.
+	- Focus on the primary change or most important aspect.
+	- Use title case for the first word only.
+	- Examples: "Add user authentication system", "Fix memory leak in parser", "Update API documentation".`,
 	}
 }
 
@@ -115,6 +136,7 @@ func Init(configFile string) error {
 	viper.SetDefault("ollama.model", defaults.Ollama.Model)
 	viper.SetDefault("rules", defaults.Rules)
 	viper.SetDefault("pr_rules", defaults.PRRules)
+	viper.SetDefault("pr_title_rules", defaults.PRTitleRules)
 
 	// If config file is explicitly specified, use that
 	if configFile != "" {
