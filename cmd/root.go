@@ -18,6 +18,7 @@ var (
 	cfgFile string
 	yolo    bool
 	add     bool
+	pr      bool
 )
 
 type CommitMessage struct {
@@ -39,6 +40,59 @@ func yoloCommit(message string) {
 	}
 
 	logger.Success("Changes committed and pushed successfully!")
+
+	// Create pull request if -pr flag is set
+	if pr {
+		createPullRequest(message)
+	}
+}
+
+// createPullRequest creates a pull request using the gh CLI
+func createPullRequest(commitMessage string) {
+	// Check if this is a GitHub repository
+	isGitHub, err := git.IsGitHubRepo()
+	if err != nil {
+		logger.Error("Error checking if repository is on GitHub: %v", err)
+		return
+	}
+
+	if !isGitHub {
+		logger.Error("This repository is not hosted on GitHub")
+		return
+	}
+
+	// Check if gh CLI is available
+	if !git.IsGhCliAvailable() {
+		logger.Error("GitHub CLI (gh) is not installed or not available in PATH")
+		logger.Info("Install it from: https://cli.github.com/")
+		return
+	}
+
+	// Check if gh is authenticated
+	if !git.IsGhAuthenticated() {
+		logger.Error("GitHub CLI is not authenticated")
+		logger.Info("Run 'gh auth login' to authenticate")
+		return
+	}
+
+	// Push the current branch to remote if not in yolo mode
+	if !yolo {
+		logger.Info("Pushing current branch to remote...")
+		if err := git.PushCurrentBranch(); err != nil {
+			logger.Error("Error pushing branch: %v", err)
+			return
+		}
+	}
+
+	logger.Info("Creating pull request...")
+
+	// Use the commit message as the PR title
+	if err := git.CreatePullRequest(commitMessage, ""); err != nil {
+		logger.Error("Error creating pull request: %v", err)
+		return
+	}
+
+	logger.Success("Pull request created successfully!")
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -191,6 +245,11 @@ var rootCmd = &cobra.Command{
 			}
 
 			logger.Success("Changes committed successfully!")
+
+			// Create pull request if -pr flag is set
+			if pr {
+				createPullRequest(message.Message)
+			}
 		}
 	},
 }
@@ -228,6 +287,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $XDG_CONFIG_HOME/kommit/config.yaml or $HOME/.config/kommit/config.yaml)")
 	rootCmd.Flags().BoolVarP(&yolo, "yolo", "y", false, "Automatically stage all changes, commit, and push without confirmation")
 	rootCmd.Flags().BoolVarP(&add, "add", "a", false, "Stage all changes before committing")
+	rootCmd.Flags().BoolVar(&pr, "pr", false, "Create pull request after committing (requires GitHub repository and gh CLI)")
 }
 
 // initConfig initializes the configuration

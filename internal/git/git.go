@@ -122,3 +122,40 @@ func CreateBranch(branchName string) error {
 	cmd := execCommand("git", "checkout", "-b", branchName)
 	return cmd.Run()
 }
+
+// IsGitHubRepo checks if the current repository is hosted on GitHub
+// by checking the origin remote URL.
+func IsGitHubRepo() (bool, error) {
+	cmd := execCommand("git", "remote", "get-url", "origin")
+	output, err := cmd.Output()
+	if err != nil {
+		return false, err
+	}
+
+	remoteURL := strings.TrimSpace(string(output))
+	return strings.Contains(remoteURL, "github.com"), nil
+}
+
+// IsGhCliAvailable checks if the gh CLI tool is available on the system.
+func IsGhCliAvailable() bool {
+	cmd := execCommand("gh", "--version")
+	return cmd.Run() == nil
+}
+
+// IsGhAuthenticated checks if the gh CLI is authenticated.
+func IsGhAuthenticated() bool {
+	cmd := execCommand("gh", "auth", "status")
+	return cmd.Run() == nil
+}
+
+// CreatePullRequest creates a pull request using the gh CLI.
+// It returns an error if the operation fails.
+func CreatePullRequest(title string, body string) error {
+	args := []string{"pr", "create", "--title", title}
+	if body != "" {
+		args = append(args, "--body", body)
+	}
+
+	cmd := execCommand("gh", args...)
+	return cmd.Run()
+}

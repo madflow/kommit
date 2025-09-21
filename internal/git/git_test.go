@@ -121,3 +121,173 @@ func TestIsGitRepo(t *testing.T) {
 		})
 	}
 }
+
+// TestIsGitHubRepo tests the IsGitHubRepo function
+func TestIsGitHubRepo(t *testing.T) {
+	// Save original execCommand and restore it after the test
+	originalExecCommand := execCommand
+	defer func() { execCommand = originalExecCommand }()
+
+	tests := []struct {
+		name     string
+		setup    func()
+		expected bool
+		hasError bool
+	}{
+		{
+			name: "is github repo",
+			setup: func() {
+				execCommand = func(name string, arg ...string) *exec.Cmd {
+					return exec.Command("echo", "git@github.com:madflow/kommit.git")
+				}
+			},
+			expected: true,
+			hasError: false,
+		},
+		{
+			name: "is github repo https",
+			setup: func() {
+				execCommand = func(name string, arg ...string) *exec.Cmd {
+					return exec.Command("echo", "https://github.com/madflow/kommit.git")
+				}
+			},
+			expected: true,
+			hasError: false,
+		},
+		{
+			name: "not github repo",
+			setup: func() {
+				execCommand = func(name string, arg ...string) *exec.Cmd {
+					return exec.Command("echo", "git@gitlab.com:madflow/kommit.git")
+				}
+			},
+			expected: false,
+			hasError: false,
+		},
+		{
+			name: "git error",
+			setup: func() {
+				execCommand = func(name string, arg ...string) *exec.Cmd {
+					return exec.Command("false")
+				}
+			},
+			expected: false,
+			hasError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the mock
+			tt.setup()
+
+			// Run the function under test
+			result, err := IsGitHubRepo()
+
+			// Check the error
+			if (err != nil) != tt.hasError {
+				t.Errorf("IsGitHubRepo() error = %v, hasError %v", err, tt.hasError)
+				return
+			}
+
+			// Check the result
+			if result != tt.expected {
+				t.Errorf("IsGitHubRepo() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestIsGhCliAvailable tests the IsGhCliAvailable function
+func TestIsGhCliAvailable(t *testing.T) {
+	// Save original execCommand and restore it after the test
+	originalExecCommand := execCommand
+	defer func() { execCommand = originalExecCommand }()
+
+	tests := []struct {
+		name     string
+		setup    func()
+		expected bool
+	}{
+		{
+			name: "gh cli available",
+			setup: func() {
+				execCommand = func(name string, arg ...string) *exec.Cmd {
+					return exec.Command("true")
+				}
+			},
+			expected: true,
+		},
+		{
+			name: "gh cli not available",
+			setup: func() {
+				execCommand = func(name string, arg ...string) *exec.Cmd {
+					return exec.Command("false")
+				}
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the mock
+			tt.setup()
+
+			// Run the function under test
+			result := IsGhCliAvailable()
+
+			// Check the result
+			if result != tt.expected {
+				t.Errorf("IsGhCliAvailable() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestIsGhAuthenticated tests the IsGhAuthenticated function
+func TestIsGhAuthenticated(t *testing.T) {
+	// Save original execCommand and restore it after the test
+	originalExecCommand := execCommand
+	defer func() { execCommand = originalExecCommand }()
+
+	tests := []struct {
+		name     string
+		setup    func()
+		expected bool
+	}{
+		{
+			name: "gh authenticated",
+			setup: func() {
+				execCommand = func(name string, arg ...string) *exec.Cmd {
+					return exec.Command("true")
+				}
+			},
+			expected: true,
+		},
+		{
+			name: "gh not authenticated",
+			setup: func() {
+				execCommand = func(name string, arg ...string) *exec.Cmd {
+					return exec.Command("false")
+				}
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the mock
+			tt.setup()
+
+			// Run the function under test
+			result := IsGhAuthenticated()
+
+			// Check the result
+			if result != tt.expected {
+				t.Errorf("IsGhAuthenticated() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
