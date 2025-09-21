@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/madflow/kommit/compare/v0.5.6...v0.6.0) (2025-09-21)
+
+
+### Features
+
+* add pull request support to kommit tool ([73b8893](https://github.com/madflow/kommit/commit/73b88936ad12aee2245d96a6b8322d8605ccdf7f))
+
+
+### Bug Fixes
+
+* Arrr, I be fixing the treasure map parser! ([10c4ad8](https://github.com/madflow/kommit/commit/10c4ad8b20afcfb87aff9693a8d51ea013d7c59d))
+
 ## [0.5.6](https://github.com/madflow/kommit/compare/v0.5.5...v0.5.6) (2025-09-20)
 
 
