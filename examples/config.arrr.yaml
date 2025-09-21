@@ -31,17 +31,42 @@ rules: |
   - test: Adding missing tests or correcting existing tests
   - chore: Changes to the build process or auxiliary tools and libraries
 
-  - Write the first line as if a pirate explaining the changes (e.g., "Arrr, I be fixin' the treasure map parser")
+  - Write the text in first line after the <type> as if a pirate explaining the changes 
   - In the body, include:
     * What was broken (if anything) in pirate terms
     * How you fixed it (or made it worse)
     * Any sacrifices made to the code gods
     * A fun fact about octopuses (they're nature's perfect commit message writers)
-  - End with a dramatic movie quote that somehow relates to the changes
+  - End with a dramatic movie quote that somehow relates to the changes and an emoji that best represents the nature of these changes (e.g., 🐛, ✨, 🚀, 🔥, 🧪, 🎨, 🚧, 💩, 🚑️, 🍻)
   - If in doubt, blame it on a cosmic ray or a mischievous squirrel
   - Bonus points for making your future self laugh when reading this in 6 months
   - Remember: if the tests pass, it's probably fine (probably)
-  - End with an emoji that best represents the nature of these changes (e.g., 🐛, ✨, 🚀, 🔥, 🧪, 🎨, 🚧, 💩, 🚑️, 🍻)
+
+  <examples-for-good-messages>
+  feat: Arrr, fixed the cursed bug that be crashin' the ship! 🐛⚔️
+
+  feat: Shiver me timbers, added new treasure to the code chest 💎🏴‍☠️
+
+  refactor: Avast! Refactored the barnacles off this scurvy code 🧽⚓
+
+  fix: Batten down the hatches - removed dead code from Davy Jones' locker 💀🗑️
+
+  merge: Yo ho ho! Merged the kraken branch without sinkin' the ship 🐙⛵
+
+  fix: Blimey! Fixed the leak that be drainin' our memory sea 🕳️🌊
+
+  chore: All hands on deck! Updated dependencies before they mutiny 📦⚔️
+
+  feat: Splice the mainbrace! Added proper error handling, ye scallywags 🛡️🏴‍☠️
+
+  fix: Land ho! Finally reached the mythical 'works on my machine' island 🏝️💻
+
+  refactor: Walk the plank, ye buggy function! Replaced with proper code 🪜💀
+
+  docs: Savvy? Added comments so future pirates can navigate this code 🗺️📝
+
+  chore: Hoist the colors! This commit be ready for production waters 🚢⭐
+  </examples-for-good-messages>
 
 # Rules for generating pull request descriptions (pirate style!)
 pr_rules: |
@@ -76,7 +101,7 @@ pr_title_rules: |
   Do not deviate from this format.
 
   - Create a swashbuckling and descriptive pull request title.
-  - Maximum length: 50 characters (aim for under 50 characters, ye scallywag).
+  - Maximum length: 80 characters (aim for under 50 characters, ye scallywag).
   - Use imperative mood ("Fix plank" not "Fixed plank" or "Fixes plank").
   - Start with a verb when possible (Fix, Add, Update, Remove, Hoist, etc.).
   - Be specific about what treasure was found or what kraken was slain.
@@ -86,3 +111,23 @@ pr_title_rules: |
   - Focus on the primary adventure or most important booty.
   - Use title case for the first word only.
   - Examples: "Fix memory leak in treasure parser", "Add rum authentication system", "Update navigation charts".
+
+  <examples-for-good-titles>
+    Arrr! New treasure map feature for navigating the codebase 🗺️🏴‍☠️
+    Shiver me timbers! Patched the holes in our authentication ship 🕳️⚓
+    Avast ye! Cleaned the barnacles off the legacy database code 🧽🦪
+    Yo ho ho! Added cannon fire notifications to alert users 💥🔔
+    Blimey! Stopped the memory kraken from sinkin' our performance 🐙⚡
+    All hands on deck! Updated npm packages before they mutiny 📦⚔️
+    Savvy? Added proper charts for navigating this treacherous API 📊🧭
+    Splice the mainbrace! New user roles system for the crew 👥🏴‍☠️
+    Walk the plank! Banished the cursed race condition bug 🚶‍♂️💀
+    Hoist the mainsail! Streamlined the component architecture ⛵🏗️
+    Land ho! New dashboard for captains to monitor their fleet 🏝️📊
+    Batten down the hatches! Secured API endpoints from scurvy hackers 🔒⚔️
+    Weigh anchor! Migrated to new deployment pipeline 🔗🚢
+    Pieces of eight! Added payment processing for the treasure chest 💰💎
+    Abandon ship! Emergency hotfix for the production servers 🚨🔥
+    Dead men tell no tales! Silenced those pesky console warnings 💀🤫
+    X marks the spot! Found and fixed the elusive CSS bug 📍🎯
+  </examples-for-good-titles>
