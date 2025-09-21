@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/madflow/kommit/compare/v0.6.0...v0.6.1) (2025-09-21)
+
+
+### Bug Fixes
+
+* **config:** correct expected output format guidance ([510ae69](https://github.com/madflow/kommit/commit/510ae69d9fe6fb4e7316525b47424d9428fcee9e))
+
 ## [0.6.0](https://github.com/madflow/kommit/compare/v0.5.6...v0.6.0) (2025-09-21)
 
 
