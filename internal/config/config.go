@@ -11,8 +11,10 @@ import (
 
 // Config holds the application configuration
 type Config struct {
-	Ollama OllamaConfig `mapstructure:"ollama"`
-	Rules  string       `mapstructure:"rules"`
+	Ollama       OllamaConfig `mapstructure:"ollama"`
+	Rules        string       `mapstructure:"rules"`
+	PRRules      string       `mapstructure:"pr_rules"`
+	PRTitleRules string       `mapstructure:"pr_title_rules"`
 }
 
 // OllamaConfig holds configuration for the Ollama API
@@ -52,6 +54,46 @@ func DefaultConfig() *Config {
   - The body of your message should provide a more detailed answers how the changes differ from the previous implementation.
   - Use the imperative, present tense («change», not «changed» or «changes») to be consistent with generated messages from commands like git merge.
   - Be direct, try to eliminate filler words and phrases in these sentences (examples: though, maybe, I think, kind of).`,
+		PRRules: `
+		Expected output format:
+
+		---
+		## Summary
+		<1-3 bullet points>
+		---
+
+		Do not deviate from this format.
+
+	- Create a concise summary for a pull request in the format "## Summary" followed by 1-3 bullet points.
+	- Each bullet point should highlight a key change or improvement made in this pull request.
+	- Focus on the value and impact of the changes, not just what files were modified.
+	- Write in plain text only - no bold, italic, or code formatting except for the ## Summary header.
+	- Use simple, direct language that explains what was accomplished.
+	- Be specific about features added, bugs fixed, or improvements made.
+	- Avoid generic descriptions like "updated files" or "made changes".
+	- Keep bullet points concise but informative (aim for 1-2 lines each).
+	- Use the past tense for describing what was accomplished in this pull request.
+	- Focus on the user-facing or developer-facing benefits of the changes.`,
+		PRTitleRules: `
+		Expected output format:
+
+		---
+		Brief descriptive title
+		---
+
+		Do not deviate from this format.
+
+	- Create a concise and descriptive pull request title.
+	- Maximum length: 50 characters (aim for under 50 characters).
+	- Use imperative mood ("Add feature" not "Added feature" or "Adds feature").
+	- Start with a verb when possible (Add, Fix, Update, Remove, etc.).
+	- Be specific about what was changed or accomplished.
+	- Do not use conventional commit prefixes (feat:, fix:, etc.) unless explicitly requested.
+	- Avoid articles (a, an, the) when possible to save space.
+	- Do not end with a period.
+	- Focus on the primary change or most important aspect.
+	- Use title case for the first word only.
+	- Examples: "Add user authentication system", "Fix memory leak in parser", "Update API documentation".`,
 	}
 }
 
@@ -93,6 +135,8 @@ func Init(configFile string) error {
 	viper.SetDefault("ollama.server_url", defaults.Ollama.ServerURL)
 	viper.SetDefault("ollama.model", defaults.Ollama.Model)
 	viper.SetDefault("rules", defaults.Rules)
+	viper.SetDefault("pr_rules", defaults.PRRules)
+	viper.SetDefault("pr_title_rules", defaults.PRTitleRules)
 
 	// If config file is explicitly specified, use that
 	if configFile != "" {

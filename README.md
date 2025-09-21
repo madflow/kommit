@@ -136,6 +136,12 @@ kommit --config /path/to/config.yaml
 kommit --yolo
 # or use the short flag
 kommit -y
+
+# Create a pull request after committing (requires GitHub repository and gh CLI)
+kommit --pr
+
+# Combine options: YOLO mode + create pull request
+kommit --yolo --pr
 ```
 
 ### Options
@@ -156,6 +162,24 @@ This option automatically stages all changes in your Git repository before gener
 #### `--yolo` or `-y`
 
 This option automatically stages all changes, commits with the generated message, and pushes to the remote repository without any confirmation prompts. It's a "fire-and-forget" mode for when you trust the process completely.
+
+#### `--pr`
+
+This option creates a pull request after committing changes. The behavior depends on your current branch:
+
+- **On the main branch**: When you're on the origin's main branch (automatically detected), the --pr flag has no effect and does nothing
+- **On a feature branch**: Creates a pull request against the origin main branch using both local and remote changes for AI generation
+
+The AI analyzes both:
+- **Local changes**: Your currently staged changes (what will be committed)
+- **Remote changes**: All changes in your branch since it diverged from the origin main branch
+
+This option requires:
+- A GitHub repository
+- GitHub CLI (`gh`) installed and authenticated  
+- Remote tracking set up (`git remote set-head origin -a` if needed)
+
+When used with `--yolo`, it will automatically commit, push, and create a pull request in one command. The AI-generated pull request title and description follow configurable rules and can be customized in your configuration file.
 
 ### Configuration
 
@@ -187,6 +211,21 @@ rules: |
   - Write the first line as if a pirate explaining the changes
   - Include what was changed and why
   - Be creative and have fun with it!
+
+# Rules for generating pull request descriptions
+pr_rules: |
+  - Create a concise summary for a pull request in the format "## Summary" followed by 1-3 bullet points
+  - Each bullet point should highlight a key change or improvement made in this pull request
+  - Focus on the value and impact of the changes, not just what files were modified
+  - Use simple, direct language that explains what was accomplished
+
+# Rules for generating pull request titles  
+pr_title_rules: |
+  - Create a concise and descriptive pull request title
+  - Maximum length: 50 characters (aim for under 50 characters)
+  - Use imperative mood ("Add feature" not "Added feature" or "Adds feature")
+  - Start with a verb when possible (Add, Fix, Update, Remove, etc.)
+  - Be specific about what was changed or accomplished
 ```
 
 ### Basic Usage
@@ -214,6 +253,28 @@ kommit -y
 #### `--add` or `-a`
 
 This option automatically stages all changes in your Git repository before generating a commit message. It's equivalent to running `git add .` before `kommit`. Use this when you want to quickly commit all modified and new files without manually staging them.
+
+#### `--yolo` or `-y`
+
+This option automatically stages all changes, commits with the generated message, and pushes to the remote repository without any confirmation prompts. It's a "fire-and-forget" mode for when you trust the process completely.
+
+#### `--pr`
+
+This option creates a pull request after committing changes. The behavior depends on your current branch:
+
+- **On the main branch**: When you're on the origin's main branch (automatically detected), the --pr flag has no effect and does nothing
+- **On a feature branch**: Creates a pull request against the origin main branch using both local and remote changes for AI generation
+
+The AI analyzes both:
+- **Local changes**: Your currently staged changes (what will be committed)
+- **Remote changes**: All changes in your branch since it diverged from the origin main branch
+
+This option requires:
+- A GitHub repository
+- GitHub CLI (`gh`) installed and authenticated  
+- Remote tracking set up (`git remote set-head origin -a` if needed)
+
+When used with `--yolo`, it will automatically commit, push, and create a pull request in one command. The AI-generated pull request title and description follow configurable rules and can be customized in your configuration file.
 
 ### How It Works
 
