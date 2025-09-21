@@ -94,7 +94,7 @@ pr_rules: |
 # Rules for generating pull request titles
 pr_title_rules: |
   - Create a concise and descriptive pull request title.
-  - Maximum length: 80 characters (aim for under 50 characters).
+  - Maximum length: 80 characters (aim for under 80 characters).
   - Use imperative mood ("Add feature" not "Added feature" or "Adds feature").
   - Start with a verb when possible (Add, Fix, Update, Remove, etc.).
   - Be specific about what was changed or accomplished.

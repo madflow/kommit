@@ -151,6 +151,7 @@ kommit --yolo --pr
 This subcommand generates a new Git branch name based on your current staged changes and creates the branch. It uses the configured Ollama model to analyze the diff and suggest a relevant branch name, ensuring it's no more than 50 characters long. This is useful for quickly creating feature or bugfix branches that reflect the work you're about to commit.
 
 Usage:
+
 ```bash
 kommit branch
 ```
@@ -171,12 +172,14 @@ This option creates a pull request after committing changes. The behavior depend
 - **On a feature branch**: Creates a pull request against the origin main branch using both local and remote changes for AI generation
 
 The AI analyzes both:
+
 - **Local changes**: Your currently staged changes (what will be committed)
 - **Remote changes**: All changes in your branch since it diverged from the origin main branch
 
 This option requires:
+
 - A GitHub repository
-- GitHub CLI (`gh`) installed and authenticated  
+- GitHub CLI (`gh`) installed and authenticated
 - Remote tracking set up (`git remote set-head origin -a` if needed)
 
 When used with `--yolo`, it will automatically commit, push, and create a pull request in one command. The AI-generated pull request title and description follow configurable rules and can be customized in your configuration file.
@@ -219,10 +222,10 @@ pr_rules: |
   - Focus on the value and impact of the changes, not just what files were modified
   - Use simple, direct language that explains what was accomplished
 
-# Rules for generating pull request titles  
+# Rules for generating pull request titles
 pr_title_rules: |
   - Create a concise and descriptive pull request title
-  - Maximum length: 50 characters (aim for under 50 characters)
+  - Maximum length: 80 characters (aim for under 80 characters)
   - Use imperative mood ("Add feature" not "Added feature" or "Adds feature")
   - Start with a verb when possible (Add, Fix, Update, Remove, etc.)
   - Be specific about what was changed or accomplished
@@ -266,12 +269,14 @@ This option creates a pull request after committing changes. The behavior depend
 - **On a feature branch**: Creates a pull request against the origin main branch using both local and remote changes for AI generation
 
 The AI analyzes both:
+
 - **Local changes**: Your currently staged changes (what will be committed)
 - **Remote changes**: All changes in your branch since it diverged from the origin main branch
 
 This option requires:
+
 - A GitHub repository
-- GitHub CLI (`gh`) installed and authenticated  
+- GitHub CLI (`gh`) installed and authenticated
 - Remote tracking set up (`git remote set-head origin -a` if needed)
 
 When used with `--yolo`, it will automatically commit, push, and create a pull request in one command. The AI-generated pull request title and description follow configurable rules and can be customized in your configuration file.
@@ -293,6 +298,7 @@ When you run `kommit`, it will:
 ### Commit Message Editing
 
 When you choose to edit the commit message (`e` or `edit`):
+
 1. Your default text editor will open with the generated commit message
    - The editor is determined by the `$EDITOR` environment variable, or defaults to `vi`
 2. Make your changes to the commit message and save the file
