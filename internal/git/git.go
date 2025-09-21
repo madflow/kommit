@@ -152,9 +152,12 @@ func IsGhAuthenticated() bool {
 // CreatePullRequest creates a pull request using the gh CLI.
 // It returns an error if the operation fails.
 func CreatePullRequest(title string, body string) error {
-	args := []string{"pr", "create", "--title", title}
+	var args []string
 	if body != "" {
-		args = append(args, "--body", body)
+		args = []string{"pr", "create", "--title", title, "--body", body}
+	} else {
+		// Use --fill flag to automatically use commit info when no body is provided
+		args = []string{"pr", "create", "--fill"}
 	}
 
 	cmd := execCommand("gh", args...)
