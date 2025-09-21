@@ -127,8 +127,20 @@ func createPullRequest(commitMessage string) {
 		prBody = ""
 	}
 
-	// Use the commit message as the PR title
-	if err := git.CreatePullRequest(commitMessage, prBody); err != nil {
+	// Generate PR title using AI (max 120 characters)
+	prTitle, err := ollamaClient.GeneratePullRequestTitle(diff, repoCtx)
+	if err != nil {
+		logger.Error("Error generating PR title: %v", err)
+		logger.Info("Using commit message as title...")
+		// Fallback: use first line of commit message, truncated to 120 characters
+		prTitle = commitMessage
+		if len(prTitle) > 120 {
+			prTitle = prTitle[:117] + "..."
+		}
+	}
+
+	// Create the pull request with generated title and body
+	if err := git.CreatePullRequest(prTitle, prBody); err != nil {
 		logger.Error("Error creating pull request: %v", err)
 		return
 	}
