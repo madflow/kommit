@@ -33,13 +33,11 @@ func DefaultConfig() *Config {
 		Rules: `
 		Expected output format:
 
-		---
 		First line: summary under 80 characters
 
 		Optional body paragraphs if needed
-		---
 
-		Do not deviate from this format.
+		IMPORTANT: Do not deviate from this format.
 
 	- Begin the message with a short summary of your changes (up to 80 characters as a guideline).
 	- Do not use any emoji or markdown in the commit message.
