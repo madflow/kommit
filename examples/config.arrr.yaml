@@ -15,7 +15,22 @@ ollama:
 
 # Rules for generating commit messages (be creative and funny!)
 rules: |
-  - Start with an emoji that best represents the nature of these changes (e.g., 🐛, ✨, 🚀, 🔥, 🧪, 🎨, 🚧, 💩, 🚑️, 🍻)
+  Follow the Conventional Commits specification (https://www.conventionalcommits.org/)
+  
+  Format: <type>[optional scope]: <description>
+  [optional body]
+  [optional footer(s)]
+  
+  Types:
+  - feat: A new feature
+  - fix: A bug fix
+  - docs: Documentation only changes
+  - style: Changes that do not affect the meaning of the code (white-space, formatting, etc)
+  - refactor: A code change that neither fixes a bug nor adds a feature
+  - perf: A code change that improves performance
+  - test: Adding missing tests or correcting existing tests
+  - chore: Changes to the build process or auxiliary tools and libraries
+
   - Write the first line as if a pirate explaining the changes (e.g., "Arrr, I be fixin' the treasure map parser")
   - In the body, include:
     * What was broken (if anything) in pirate terms
@@ -26,6 +41,7 @@ rules: |
   - If in doubt, blame it on a cosmic ray or a mischievous squirrel
   - Bonus points for making your future self laugh when reading this in 6 months
   - Remember: if the tests pass, it's probably fine (probably)
+  - End with an emoji that best represents the nature of these changes (e.g., 🐛, ✨, 🚀, 🔥, 🧪, 🎨, 🚧, 💩, 🚑️, 🍻)
 
 # Rules for generating pull request descriptions (pirate style!)
 pr_rules: |
