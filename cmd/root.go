@@ -99,8 +99,36 @@ func createPullRequest(commitMessage string) {
 
 	logger.Info("Creating pull request...")
 
+	// Get repository context for PR body generation
+	repoCtx, err := git.GetRepoContext()
+	if err != nil {
+		logger.Error("Error getting repository context: %v", err)
+		return
+	}
+
+	// Get the diff for PR body generation
+	diff, err := git.GetGitDiff()
+	if err != nil {
+		logger.Error("Error getting diff: %v", err)
+		return
+	}
+
+	// Get the configuration for PR rules
+	cfg := config.Get()
+
+	// Create ollama client for PR body generation
+	ollamaClient := ollama.NewClient(&cfg.Ollama)
+
+	// Generate PR body using AI
+	prBody, err := ollamaClient.GeneratePullRequestBody(diff, cfg.PRRules, repoCtx)
+	if err != nil {
+		logger.Error("Error generating PR body: %v", err)
+		logger.Info("Creating PR with empty body...")
+		prBody = ""
+	}
+
 	// Use the commit message as the PR title
-	if err := git.CreatePullRequest(commitMessage, ""); err != nil {
+	if err := git.CreatePullRequest(commitMessage, prBody); err != nil {
 		logger.Error("Error creating pull request: %v", err)
 		return
 	}
