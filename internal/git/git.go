@@ -1,6 +1,7 @@
 package git
 
 import (
+	"fmt"
 	"os/exec"
 	"strings"
 )
@@ -157,5 +158,19 @@ func CreatePullRequest(title string, body string) error {
 	}
 
 	cmd := execCommand("gh", args...)
-	return cmd.Run()
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("gh pr create failed: %v\nOutput: %s", err, string(output))
+	}
+	return nil
+}
+
+// GetCurrentBranch returns the name of the current git branch.
+func GetCurrentBranch() (string, error) {
+	cmd := execCommand("git", "rev-parse", "--abbrev-ref", "HEAD")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(output)), nil
 }

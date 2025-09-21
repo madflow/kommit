@@ -291,3 +291,69 @@ func TestIsGhAuthenticated(t *testing.T) {
 		})
 	}
 }
+
+// TestGetCurrentBranch tests the GetCurrentBranch function
+func TestGetCurrentBranch(t *testing.T) {
+	// Save original execCommand and restore it after the test
+	originalExecCommand := execCommand
+	defer func() { execCommand = originalExecCommand }()
+
+	tests := []struct {
+		name     string
+		setup    func()
+		expected string
+		hasError bool
+	}{
+		{
+			name: "get current branch",
+			setup: func() {
+				execCommand = func(name string, arg ...string) *exec.Cmd {
+					return exec.Command("echo", "feat/test-branch")
+				}
+			},
+			expected: "feat/test-branch",
+			hasError: false,
+		},
+		{
+			name: "main branch",
+			setup: func() {
+				execCommand = func(name string, arg ...string) *exec.Cmd {
+					return exec.Command("echo", "main")
+				}
+			},
+			expected: "main",
+			hasError: false,
+		},
+		{
+			name: "git error",
+			setup: func() {
+				execCommand = func(name string, arg ...string) *exec.Cmd {
+					return exec.Command("false")
+				}
+			},
+			expected: "",
+			hasError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the mock
+			tt.setup()
+
+			// Run the function under test
+			result, err := GetCurrentBranch()
+
+			// Check the error
+			if (err != nil) != tt.hasError {
+				t.Errorf("GetCurrentBranch() error = %v, hasError %v", err, tt.hasError)
+				return
+			}
+
+			// Check the result
+			if result != tt.expected {
+				t.Errorf("GetCurrentBranch() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}

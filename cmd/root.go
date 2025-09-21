@@ -61,6 +61,19 @@ func createPullRequest(commitMessage string) {
 		return
 	}
 
+	// Check current branch - don't create PR from main/master branch
+	currentBranch, err := git.GetCurrentBranch()
+	if err != nil {
+		logger.Error("Error getting current branch: %v", err)
+		return
+	}
+
+	if currentBranch == "main" || currentBranch == "master" {
+		logger.Error("Cannot create pull request from main/master branch")
+		logger.Info("Create a feature branch first: git checkout -b feature/your-feature")
+		return
+	}
+
 	// Check if gh CLI is available
 	if !git.IsGhCliAvailable() {
 		logger.Error("GitHub CLI (gh) is not installed or not available in PATH")
