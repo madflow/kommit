@@ -1,6 +1,7 @@
 package git
 
 import (
+	"fmt"
 	"os/exec"
 	"strings"
 )
@@ -121,4 +122,88 @@ func PushCurrentBranch() error {
 func CreateBranch(branchName string) error {
 	cmd := execCommand("git", "checkout", "-b", branchName)
 	return cmd.Run()
+}
+
+// IsGitHubRepo checks if the current repository is hosted on GitHub
+// by checking the origin remote URL.
+func IsGitHubRepo() (bool, error) {
+	cmd := execCommand("git", "remote", "get-url", "origin")
+	output, err := cmd.Output()
+	if err != nil {
+		return false, err
+	}
+
+	remoteURL := strings.TrimSpace(string(output))
+	return strings.Contains(remoteURL, "github.com"), nil
+}
+
+// IsGhCliAvailable checks if the gh CLI tool is available on the system.
+func IsGhCliAvailable() bool {
+	cmd := execCommand("gh", "--version")
+	return cmd.Run() == nil
+}
+
+// IsGhAuthenticated checks if the gh CLI is authenticated.
+func IsGhAuthenticated() bool {
+	cmd := execCommand("gh", "auth", "status")
+	return cmd.Run() == nil
+}
+
+// CreatePullRequest creates a pull request using the gh CLI.
+// It returns an error if the operation fails.
+func CreatePullRequest(title string, body string) error {
+	var args []string
+	if body != "" {
+		args = []string{"pr", "create", "--title", title, "--body", body}
+	} else {
+		// Use --fill flag to automatically use commit info when no body is provided
+		args = []string{"pr", "create", "--fill"}
+	}
+
+	cmd := execCommand("gh", args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("gh pr create failed: %v\nOutput: %s", err, string(output))
+	}
+	return nil
+}
+
+// GetCurrentBranch returns the name of the current git branch.
+func GetCurrentBranch() (string, error) {
+	cmd := execCommand("git", "rev-parse", "--abbrev-ref", "HEAD")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
+// GetOriginMainBranch returns the name of the main branch on origin remote.
+// It uses the command: git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'
+func GetOriginMainBranch() (string, error) {
+	cmd := execCommand("git", "symbolic-ref", "refs/remotes/origin/HEAD")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	// Remove the "refs/remotes/origin/" prefix
+	fullRef := strings.TrimSpace(string(output))
+	prefix := "refs/remotes/origin/"
+	if strings.HasPrefix(fullRef, prefix) {
+		return strings.TrimPrefix(fullRef, prefix), nil
+	}
+
+	return fullRef, nil
+}
+
+// GetDiffFromOriginMain returns the diff between the current branch and origin/main.
+// mainBranch should be the name of the main branch (e.g., "main", "master").
+func GetDiffFromOriginMain(mainBranch string) (string, error) {
+	cmd := execCommand("git", "diff", fmt.Sprintf("origin/%s...HEAD", mainBranch))
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return string(output), nil
 }

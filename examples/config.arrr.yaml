@@ -26,3 +26,47 @@ rules: |
   - If in doubt, blame it on a cosmic ray or a mischievous squirrel
   - Bonus points for making your future self laugh when reading this in 6 months
   - Remember: if the tests pass, it's probably fine (probably)
+
+# Rules for generating pull request descriptions (pirate style!)
+pr_rules: |
+  Expected output format:
+
+  ---
+  ## Summary
+  <1-3 bullet points>
+  ---
+
+  Do not deviate from this format.
+
+  - Create a rollicking good summary for a pull request in the format "## Summary" followed by 1-3 bullet points.
+  - Each bullet point should highlight a key treasure (change) or adventure (improvement) made in this pull request.
+  - Focus on the booty (value) and impact of the changes, not just what ship parts (files) were modified.
+  - Write in plain text only - no bold, italic, or code formatting except for the ## Summary header.
+  - Use simple, direct pirate language that explains what plunder was accomplished.
+  - Be specific about features added, bugs keelhauled, or improvements made to the ship.
+  - Avoid generic descriptions like "updated files" or "made changes" - that's landlubber talk!
+  - Keep bullet points concise but informative (aim for 1-2 lines each, matey).
+  - Use the past tense for describing what was accomplished in this pull request.
+  - Focus on the crew-facing or captain-facing benefits of the changes.
+
+# Rules for generating pull request titles (pirate style!)
+pr_title_rules: |
+  Expected output format:
+
+  ---
+  Brief descriptive title
+  ---
+
+  Do not deviate from this format.
+
+  - Create a swashbuckling and descriptive pull request title.
+  - Maximum length: 50 characters (aim for under 50 characters, ye scallywag).
+  - Use imperative mood ("Fix plank" not "Fixed plank" or "Fixes plank").
+  - Start with a verb when possible (Fix, Add, Update, Remove, Hoist, etc.).
+  - Be specific about what treasure was found or what kraken was slain.
+  - Do not use conventional commit prefixes (feat:, fix:, etc.) unless the captain demands it.
+  - Avoid articles (a, an, the) when possible to save precious character space.
+  - Do not end with a period - we're pirates, not scribes!
+  - Focus on the primary adventure or most important booty.
+  - Use title case for the first word only.
+  - Examples: "Fix memory leak in treasure parser", "Add rum authentication system", "Update navigation charts".

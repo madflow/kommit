@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -18,6 +19,7 @@ var (
 	cfgFile string
 	yolo    bool
 	add     bool
+	pr      bool
 )
 
 type CommitMessage struct {
@@ -39,6 +41,156 @@ func yoloCommit(message string) {
 	}
 
 	logger.Success("Changes committed and pushed successfully!")
+
+	// Create pull request if -pr flag is set
+	if pr {
+		createPullRequest(message)
+	}
+}
+
+// createPullRequest creates a pull request using the gh CLI
+func createPullRequest(commitMessage string) {
+	// Check if this is a GitHub repository
+	isGitHub, err := git.IsGitHubRepo()
+	if err != nil {
+		logger.Error("Error checking if repository is on GitHub: %v", err)
+		return
+	}
+
+	if !isGitHub {
+		logger.Error("This repository is not hosted on GitHub")
+		return
+	}
+
+	// Get current branch
+	currentBranch, err := git.GetCurrentBranch()
+	if err != nil {
+		logger.Error("Error getting current branch: %v", err)
+		return
+	}
+
+	// Detect the origin main branch name
+	originMainBranch, err := git.GetOriginMainBranch()
+	if err != nil {
+		logger.Error("Error detecting origin main branch: %v", err)
+		logger.Info("Make sure remote tracking is set up: git remote set-head origin -a")
+		return
+	}
+
+	// If current branch is the origin main branch, do nothing
+	if currentBranch == originMainBranch {
+		logger.Info("Current branch (%s) is the main branch. --pr flag has no effect.", currentBranch)
+		return
+	}
+
+	// Check if gh CLI is available
+	if !git.IsGhCliAvailable() {
+		logger.Error("GitHub CLI (gh) is not installed or not available in PATH")
+		logger.Info("Install it from: https://cli.github.com/")
+		return
+	}
+
+	// Check if gh is authenticated
+	if !git.IsGhAuthenticated() {
+		logger.Error("GitHub CLI is not authenticated")
+		logger.Info("Run 'gh auth login' to authenticate")
+		return
+	}
+
+	// Push the current branch to remote if not in yolo mode
+	if !yolo {
+		logger.Info("Pushing current branch to remote...")
+		if err := git.PushCurrentBranch(); err != nil {
+			logger.Error("Error pushing branch: %v", err)
+			return
+		}
+	}
+
+	logger.Info("Creating pull request...")
+
+	// Get repository context for PR body generation
+	repoCtx, err := git.GetRepoContext()
+	if err != nil {
+		logger.Error("Error getting repository context: %v", err)
+		return
+	}
+
+	// Get the local staged diff (current changes)
+	localDiff, err := git.GetGitDiff()
+	if err != nil {
+		logger.Error("Error getting local diff: %v", err)
+		return
+	}
+
+	// Get the remote diff (changes from origin main to current branch)
+	remoteDiff, err := git.GetDiffFromOriginMain(originMainBranch)
+	if err != nil {
+		logger.Error("Error getting remote diff: %v", err)
+		return
+	}
+
+	// Combine local and remote diffs for PR generation
+	combinedDiff := fmt.Sprintf("=== LOCAL CHANGES (staged) ===\n%s\n\n=== REMOTE CHANGES (since %s) ===\n%s", localDiff, originMainBranch, remoteDiff)
+
+	// Get the configuration for PR rules
+	cfg := config.Get()
+
+	// Create ollama client for PR body generation
+	ollamaClient := ollama.NewClient(&cfg.Ollama)
+
+	// Generate PR body using AI with combined diff
+	prBody, err := ollamaClient.GeneratePullRequestBody(combinedDiff, cfg.PRRules, repoCtx)
+	if err != nil {
+		logger.Error("Error generating PR body: %v", err)
+		logger.Info("Creating PR with empty body...")
+		prBody = ""
+	}
+
+	// Generate PR title using AI with configurable rules
+	prTitle, err := ollamaClient.GeneratePullRequestTitle(combinedDiff, cfg.PRTitleRules, repoCtx)
+	if err != nil {
+		logger.Error("Error generating PR title: %v", err)
+		logger.Info("Using commit message as title...")
+		// Fallback: use first line of commit message, truncated to reasonable length
+		prTitle = commitMessage
+		maxLength := 50 // Default fallback
+
+		// Try to extract max length from PR title rules if specified
+		if strings.Contains(cfg.PRTitleRules, "Maximum length:") {
+			parts := strings.Split(cfg.PRTitleRules, "Maximum length:")
+			if len(parts) > 1 {
+				lengthPart := strings.Split(parts[1], "characters")[0]
+				lengthStr := strings.TrimSpace(lengthPart)
+				if len(lengthStr) > 0 {
+					var numStr string
+					for _, char := range lengthStr {
+						if char >= '0' && char <= '9' {
+							numStr += string(char)
+						} else {
+							break
+						}
+					}
+					if numStr != "" {
+						if parsed, err := fmt.Sscanf(numStr, "%d", &maxLength); err != nil || parsed != 1 {
+							maxLength = 50 // Keep default on parse error
+						}
+					}
+				}
+			}
+		}
+
+		if len(prTitle) > maxLength {
+			prTitle = prTitle[:maxLength-3] + "..."
+		}
+	}
+
+	// Create the pull request with generated title and body
+	if err := git.CreatePullRequest(prTitle, prBody); err != nil {
+		logger.Error("Error creating pull request: %v", err)
+		return
+	}
+
+	logger.Success("Pull request created successfully!")
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -191,6 +343,11 @@ var rootCmd = &cobra.Command{
 			}
 
 			logger.Success("Changes committed successfully!")
+
+			// Create pull request if -pr flag is set
+			if pr {
+				createPullRequest(message.Message)
+			}
 		}
 	},
 }
@@ -228,6 +385,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $XDG_CONFIG_HOME/kommit/config.yaml or $HOME/.config/kommit/config.yaml)")
 	rootCmd.Flags().BoolVarP(&yolo, "yolo", "y", false, "Automatically stage all changes, commit, and push without confirmation")
 	rootCmd.Flags().BoolVarP(&add, "add", "a", false, "Stage all changes before committing")
+	rootCmd.Flags().BoolVar(&pr, "pr", false, "Create pull request after committing")
 }
 
 // initConfig initializes the configuration
