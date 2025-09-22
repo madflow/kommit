@@ -215,7 +215,6 @@ func getConfigFilePaths() []string {
 	return paths
 }
 
-// GetString wraps viper.GetString
 type Getter interface {
 	GetString(key string) string
 	GetStringMap(key string) map[string]any

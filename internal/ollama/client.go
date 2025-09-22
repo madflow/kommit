@@ -114,6 +114,7 @@ func (c *Client) GenerateBranchName(diff string) (string, error) {
 You are a git branch name generator. 
 Output ONLY the branch name in plain text format with no additional text, headers, or formatting.
 The branch name should only contain alphanumeric characters and the symbols: -, _, /.
+The branch name should not be longer than 40 characters.
 
 Git diff:
 %s`, diff)
@@ -216,6 +217,8 @@ func (c *Client) GeneratePullRequestTitle(diff, rules string, repoCtx *git.RepoC
 	prompt := fmt.Sprintf(`
 You are a pull request title generator.
 Output ONLY the pull request title in plain text format with no additional text, headers, or formatting.
+The pull request title should only contain alphanumeric characters and the symbols: -, _, /.
+The pull request title should not be longer than 50 characters.
 
 Repository Context:
 - Branch name: %s
