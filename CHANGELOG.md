@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/madflow/kommit/compare/v0.6.1...v0.6.2) (2025-09-22)
+
+
+### Bug Fixes
+
+* remove unnecessary GetString method from config.go and update client.go for more accurate messages ([b6f60fc](https://github.com/madflow/kommit/commit/b6f60fc4f34f25e73ccd89cbc29ac7220d361d27))
+
 ## [0.6.1](https://github.com/madflow/kommit/compare/v0.6.0...v0.6.1) (2025-09-21)
 
 
