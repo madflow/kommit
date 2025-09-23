@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.0](https://github.com/madflow/kommit/compare/v0.6.2...v0.7.0) (2025-09-23)
+
+
+### Features
+
+* **pr-url:** log pull request URL on creation ([4435452](https://github.com/madflow/kommit/commit/44354525ebdd9e99c45bfe50b5097581db35e28f))
+
+
+### Bug Fixes
+
+* 📝 update PR title rules and config formatting ([86bbe58](https://github.com/madflow/kommit/commit/86bbe5886fc596437a08566c7b727a9415945976))
+
 ## [0.6.2](https://github.com/madflow/kommit/compare/v0.6.1...v0.6.2) (2025-09-22)
 
 
