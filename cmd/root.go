@@ -185,12 +185,14 @@ func createPullRequest(commitMessage string) {
 	}
 
 	// Create the pull request with generated title and body
-	if err := git.CreatePullRequest(prTitle, prBody); err != nil {
+	prUrl, err := git.CreatePullRequest(prTitle, prBody)
+	if err != nil {
 		logger.Error("Error creating pull request: %v", err)
 		return
 	}
 
 	logger.Success("Pull request created successfully!")
+	logger.Info("URL: %s", prUrl)
 }
 
 // rootCmd represents the base command when called without any subcommands

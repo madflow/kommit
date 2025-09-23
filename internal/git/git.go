@@ -150,8 +150,8 @@ func IsGhAuthenticated() bool {
 }
 
 // CreatePullRequest creates a pull request using the gh CLI.
-// It returns an error if the operation fails.
-func CreatePullRequest(title string, body string) error {
+// It returns the URL of the created pull request and an error if the operation fails.
+func CreatePullRequest(title string, body string) (string, error) {
 	var args []string
 	if body != "" {
 		args = []string{"pr", "create", "--title", title, "--body", body}
@@ -163,9 +163,12 @@ func CreatePullRequest(title string, body string) error {
 	cmd := execCommand("gh", args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("gh pr create failed: %v\nOutput: %s", err, string(output))
+		return "", fmt.Errorf("gh pr create failed: %v\nOutput: %s", err, string(output))
 	}
-	return nil
+
+	// Extract the URL from the output (gh pr create returns the PR URL)
+	url := strings.TrimSpace(string(output))
+	return url, nil
 }
 
 // GetCurrentBranch returns the name of the current git branch.
