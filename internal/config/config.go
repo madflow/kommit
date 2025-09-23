@@ -55,10 +55,9 @@ func DefaultConfig() *Config {
 		PRRules: `
 		Expected output format:
 
-		---
 		## Summary
+
 		<1-3 bullet points>
-		---
 
 		Do not deviate from this format.
 
@@ -73,16 +72,12 @@ func DefaultConfig() *Config {
 	- Use the past tense for describing what was accomplished in this pull request.
 	- Focus on the user-facing or developer-facing benefits of the changes.`,
 		PRTitleRules: `
-		Expected output format:
-
-		---
-		Brief descriptive title
-		---
-
-		Do not deviate from this format.
-
 	- Create a concise and descriptive pull request title.
 	- Maximum length: 50 characters (aim for under 50 characters).
+	- Do no use any emoji or markdown in the title.
+	- Do not use any formatting characters including asterisks (*), underscores (_), backticks, brackets [] or any other markup symbols.
+	- Do not use newline characters in the title.
+	- Always start with a capital letter.
 	- Use imperative mood ("Add feature" not "Added feature" or "Adds feature").
 	- Start with a verb when possible (Add, Fix, Update, Remove, etc.).
 	- Be specific about what was changed or accomplished.
