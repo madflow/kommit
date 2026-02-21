@@ -95,8 +95,8 @@ func (r *RepoContext) String() string {
 	var sb strings.Builder
 
 	sb.WriteString("REPOSITORY CONTEXT:\n")
-	sb.WriteString(fmt.Sprintf("Branch: %s\n", r.BranchName))
-	sb.WriteString(fmt.Sprintf("Files changed: %d\n", r.FilesChanged))
+	fmt.Fprintf(&sb, "Branch: %s\n", r.BranchName)
+	fmt.Fprintf(&sb, "Files changed: %d\n", r.FilesChanged)
 
 	sb.WriteString("\nCHANGE SUMMARY:\n")
 	sb.WriteString(r.ChangeSummary)
@@ -104,7 +104,7 @@ func (r *RepoContext) String() string {
 	if len(r.FileChanges) > 0 {
 		sb.WriteString("\nFILE CHANGES:\n")
 		for _, change := range r.FileChanges {
-			sb.WriteString(fmt.Sprintf("[%s] %s (%s)\n", change.Status, change.FilePath, change.FileType))
+			fmt.Fprintf(&sb, "[%s] %s (%s)\n", change.Status, change.FilePath, change.FileType)
 		}
 	}
 
