@@ -61,8 +61,8 @@ func GetRepoContext() (*RepoContext, error) {
 		return nil, fmt.Errorf("failed to get file changes: %w", err)
 	}
 
-	changes := strings.Split(strings.TrimSpace(string(changesOut)), "\n")
-	for _, change := range changes {
+	changes := strings.SplitSeq(strings.TrimSpace(string(changesOut)), "\n")
+	for change := range changes {
 		if change == "" {
 			continue
 		}
