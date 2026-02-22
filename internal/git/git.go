@@ -193,8 +193,8 @@ func GetOriginMainBranch() (string, error) {
 	// Remove the "refs/remotes/origin/" prefix
 	fullRef := strings.TrimSpace(string(output))
 	prefix := "refs/remotes/origin/"
-	if strings.HasPrefix(fullRef, prefix) {
-		return strings.TrimPrefix(fullRef, prefix), nil
+	if after, ok := strings.CutPrefix(fullRef, prefix); ok {
+		return after, nil
 	}
 
 	return fullRef, nil
