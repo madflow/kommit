@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.3](https://github.com/madflow/kommit/compare/v0.7.2...v0.7.3) (2026-03-19)
+
+
+### Bug Fixes
+
+* simplify code ([1febfa4](https://github.com/madflow/kommit/commit/1febfa4bcf185c146995acd95abacff5b151b130))
+
 ## [0.7.2](https://github.com/madflow/kommit/compare/v0.7.1...v0.7.2) (2026-03-19)
 
 
