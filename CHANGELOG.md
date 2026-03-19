@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.2](https://github.com/madflow/kommit/compare/v0.7.1...v0.7.2) (2026-03-19)
+
+
+### Bug Fixes
+
+* **config:** OpenAi SDK ([946da45](https://github.com/madflow/kommit/commit/946da45e388e389f1970c6377fc2e713933a7128))
+* **provider/stream.go:** remove unused logger import and function ([6ab225b](https://github.com/madflow/kommit/commit/6ab225b18c3a92220a8497f3bea9e5997a354abc))
+
 ## [0.7.1](https://github.com/madflow/kommit/compare/v0.7.0...v0.7.1) (2025-12-04)
 
 
