@@ -4,32 +4,60 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/madflow/kommit/internal/git"
 	"github.com/spf13/viper"
 )
 
-// Config holds the application configuration
 type Config struct {
-	Ollama       OllamaConfig `mapstructure:"ollama"`
-	Rules        string       `mapstructure:"rules"`
-	PRRules      string       `mapstructure:"pr_rules"`
-	PRTitleRules string       `mapstructure:"pr_title_rules"`
+	Providers       map[string]ProviderConfig `mapstructure:"providers"`
+	DefaultProvider string                    `mapstructure:"default_provider"`
+	DefaultModel    string                    `mapstructure:"default_model"`
+	Rules           string                    `mapstructure:"rules"`
+	PRRules         string                    `mapstructure:"pr_rules"`
+	PRTitleRules    string                    `mapstructure:"pr_title_rules"`
 }
 
-// OllamaConfig holds configuration for the Ollama API
+type ProviderConfig struct {
+	Name    string        `mapstructure:"name"`
+	BaseURL string        `mapstructure:"base_url"`
+	Type    string        `mapstructure:"type"`
+	APIKey  string        `mapstructure:"api_key"`
+	Models  []ModelConfig `mapstructure:"models"`
+}
+
+type ModelConfig struct {
+	Name             string `mapstructure:"name"`
+	ID               string `mapstructure:"id"`
+	ContextWindow    int    `mapstructure:"context_window"`
+	DefaultMaxTokens int    `mapstructure:"default_max_tokens"`
+}
+
 type OllamaConfig struct {
 	ServerURL string `mapstructure:"server_url"`
 	Model     string `mapstructure:"model"`
 }
 
-// DefaultConfig returns the default configuration
 func DefaultConfig() *Config {
 	return &Config{
-		Ollama: OllamaConfig{
-			ServerURL: "http://localhost:11434/api/generate",
-			Model:     "qwen2.5-coder:7b",
+		Providers: map[string]ProviderConfig{
+			"ollama": {
+				Name:    "Ollama",
+				BaseURL: "http://localhost:11434/v1/",
+				Type:    "openai-compat",
+				Models: []ModelConfig{
+					{
+						Name:             "Qwen 2.5 Coder 7B",
+						ID:               "qwen2.5-coder:7b",
+						ContextWindow:    32768,
+						DefaultMaxTokens: 4096,
+					},
+				},
+			},
 		},
+		DefaultProvider: "ollama",
+		DefaultModel:    "qwen2.5-coder:7b",
 		Rules: `
 		Expected output format:
 
@@ -100,38 +128,71 @@ const (
 var appConfig *Config
 
 func readAndUnmarshalConfig() error {
-	// Try to read the config file
 	err := viper.ReadInConfig()
 	if err != nil {
-		return err // Return the original error to handle it in the caller
+		return err
 	}
 
-	// Get the config file path for better error reporting
 	configFile := viper.ConfigFileUsed()
 	if configFile == "" {
 		configFile = "(unknown file)"
 	}
 
-	// If we get here, we successfully read a config file
-	// Now unmarshal it into our config struct
 	appConfig = &Config{}
 	if err := viper.Unmarshal(appConfig); err != nil {
 		return fmt.Errorf("error parsing %s: %w", configFile, err)
 	}
+
+	migrateLegacyConfig(appConfig)
+
 	return nil
 }
 
-// Init initializes the configuration
+func migrateLegacyConfig(cfg *Config) {
+	if len(cfg.Providers) == 0 {
+		var legacyOllama OllamaConfig
+		if err := viper.UnmarshalKey("ollama", &legacyOllama); err == nil {
+			if legacyOllama.ServerURL != "" && legacyOllama.Model != "" {
+				baseURL := legacyOllama.ServerURL
+				if strings.HasSuffix(baseURL, "/api/generate") {
+					baseURL = strings.TrimSuffix(baseURL, "/api/generate") + "/v1/"
+				}
+
+				cfg.Providers = map[string]ProviderConfig{
+					"ollama": {
+						Name:    "Ollama",
+						BaseURL: baseURL,
+						Type:    "openai-compat",
+						Models: []ModelConfig{
+							{
+								ID:               legacyOllama.Model,
+								Name:             legacyOllama.Model,
+								ContextWindow:    32768,
+								DefaultMaxTokens: 4096,
+							},
+						},
+					},
+				}
+				cfg.DefaultProvider = "ollama"
+				cfg.DefaultModel = legacyOllama.Model
+			}
+		}
+	}
+}
+
 func Init(configFile string) error {
-	// Set defaults
 	defaults := DefaultConfig()
-	viper.SetDefault("ollama.server_url", defaults.Ollama.ServerURL)
-	viper.SetDefault("ollama.model", defaults.Ollama.Model)
+	if len(defaults.Providers) > 0 {
+		for providerName, provider := range defaults.Providers {
+			viper.SetDefault(fmt.Sprintf("providers.%s", providerName), provider)
+		}
+	}
+	viper.SetDefault("default_provider", defaults.DefaultProvider)
+	viper.SetDefault("default_model", defaults.DefaultModel)
 	viper.SetDefault("rules", defaults.Rules)
 	viper.SetDefault("pr_rules", defaults.PRRules)
 	viper.SetDefault("pr_title_rules", defaults.PRTitleRules)
 
-	// If config file is explicitly specified, use that
 	if configFile != "" {
 		viper.SetConfigFile(configFile)
 		if err := readAndUnmarshalConfig(); err != nil {
@@ -140,25 +201,17 @@ func Init(configFile string) error {
 		return nil
 	}
 
-	// Try each potential config file in order of preference
 	for _, configPath := range getConfigFilePaths() {
 		if _, err := os.Stat(configPath); err == nil {
 			viper.SetConfigFile(configPath)
 			if err := readAndUnmarshalConfig(); err == nil {
-				// Successfully loaded a config file
 				return nil
 			}
-			// Continue to next config source if there's an error reading this one
 		}
 	}
 
-	// If we get here, no config file was found
 	appConfig = DefaultConfig()
-
-	// Apply environment variables on top of the default config
 	viper.AutomaticEnv()
-
-	// Apply environment variable overrides
 	if err := viper.Unmarshal(appConfig); err != nil {
 		return fmt.Errorf("error applying environment overrides: %w", err)
 	}
@@ -166,7 +219,6 @@ func Init(configFile string) error {
 	return nil
 }
 
-// Get returns the loaded configuration
 func Get() *Config {
 	if appConfig == nil {
 		return DefaultConfig()
@@ -174,36 +226,108 @@ func Get() *Config {
 	return appConfig
 }
 
-// getConfigFilePaths returns a list of potential config file paths in order of preference:
-// 1. $PWD/.kommit.yaml
-// 2. $GIT_DIR/.kommit.yaml (if inside a git repository)
-// 3. $XDG_CONFIG_HOME/kommit/config.yaml
-// 4. $HOME/.config/kommit/config.yaml
-// 5. $HOME/.kommit.yaml
+func (c *Config) GetProvider(name string) (*ProviderConfig, error) {
+	if name == "" {
+		name = c.DefaultProvider
+	}
+	if name == "" && len(c.Providers) > 0 {
+		for pname := range c.Providers {
+			name = pname
+			break
+		}
+	}
+
+	provider, ok := c.Providers[name]
+	if !ok {
+		return nil, fmt.Errorf("provider '%s' not found", name)
+	}
+	return &provider, nil
+}
+
+func (c *Config) GetModel(providerName, modelID string) (*ModelConfig, error) {
+	provider, err := c.GetProvider(providerName)
+	if err != nil {
+		return nil, err
+	}
+
+	if modelID == "" {
+		modelID = c.DefaultModel
+	}
+
+	for i := range provider.Models {
+		if provider.Models[i].ID == modelID {
+			return &provider.Models[i], nil
+		}
+	}
+
+	if modelID == c.DefaultModel && len(provider.Models) > 0 {
+		return &provider.Models[0], nil
+	}
+
+	return nil, fmt.Errorf("model '%s' not found in provider '%s'", modelID, providerName)
+}
+
+func (c *Config) ResolveProviderModel(providerFlag, modelFlag string) (string, string) {
+	provider := providerFlag
+	model := modelFlag
+
+	if provider == "" {
+		provider = os.Getenv("KOMMIT_PROVIDER")
+	}
+	if model == "" {
+		model = os.Getenv("KOMMIT_MODEL")
+	}
+
+	if provider == "" {
+		provider = c.DefaultProvider
+	}
+	if model == "" {
+		model = c.DefaultModel
+	}
+
+	if provider == "" && len(c.Providers) > 0 {
+		for pname := range c.Providers {
+			provider = pname
+			break
+		}
+	}
+
+	return provider, model
+}
+
+func (c *Config) GetProviderFallbackOrder(preferredProvider string) []string {
+	var order []string
+	if preferredProvider != "" {
+		order = append(order, preferredProvider)
+	}
+
+	for name := range c.Providers {
+		if name != preferredProvider {
+			order = append(order, name)
+		}
+	}
+
+	return order
+}
+
 func getConfigFilePaths() []string {
 	var paths []string
 
-	// 1. Current working directory
 	if pwd, err := os.Getwd(); err == nil {
 		paths = append(paths, filepath.Join(pwd, StandaloneConfigFileName+"."+ConfigFileExt))
 	}
 
-	// 2. Git directory
 	if gitDir, err := git.GetGitDir(); err == nil && gitDir != "" {
 		paths = append(paths, filepath.Join(gitDir, StandaloneConfigFileName+"."+ConfigFileExt))
 	}
 
-	// 3. XDG config home
 	if xdgConfigHome := os.Getenv("XDG_CONFIG_HOME"); xdgConfigHome != "" {
 		paths = append(paths, filepath.Join(xdgConfigHome, AppName, ConfigFileName+"."+ConfigFileExt))
 	}
 
-	// 4. Standard XDG config directory
 	home, err := os.UserHomeDir()
 	if err == nil {
 		paths = append(paths, filepath.Join(home, ".config", AppName, ConfigFileName+"."+ConfigFileExt))
-
-		// 5. Home directory
 		paths = append(paths, filepath.Join(home, StandaloneConfigFileName+"."+ConfigFileExt))
 	}
 
@@ -219,7 +343,6 @@ type Getter interface {
 	GetBool(key string) bool
 }
 
-// Viper returns the underlying viper instance
 func Viper() Getter {
 	return viper.GetViper()
 }

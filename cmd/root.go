@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,7 +11,7 @@ import (
 	"github.com/madflow/kommit/internal/config"
 	"github.com/madflow/kommit/internal/git"
 	"github.com/madflow/kommit/internal/logger"
-	"github.com/madflow/kommit/internal/ollama"
+	"github.com/madflow/kommit/internal/provider"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -20,6 +21,10 @@ var (
 	yolo    bool
 	add     bool
 	pr      bool
+
+	flagProvider string
+	flagModel    string
+	flagStream   bool
 )
 
 type CommitMessage struct {
@@ -135,11 +140,21 @@ func createPullRequest(commitMessage string) {
 	// Get the configuration for PR rules
 	cfg := config.Get()
 
-	// Create ollama client for PR body generation
-	ollamaClient := ollama.NewClient(&cfg.Ollama)
+	// Get provider and model from flags, env, or config
+	providerName, modelName := cfg.ResolveProviderModel(flagProvider, flagModel)
+
+	// Create provider client for PR body generation
+	providerClient := provider.NewClient(cfg)
+	if !flagStream {
+		providerClient = provider.NewClientWithStreaming(cfg, false)
+	}
 
 	// Generate PR body using AI with combined diff
-	prBody, err := ollamaClient.GeneratePullRequestBody(combinedDiff, cfg.PRRules, repoCtx)
+	prBody, err := providerClient.GeneratePullRequestBody(context.Background(), combinedDiff, cfg.PRRules, repoCtx, provider.GenerateOptions{
+		Provider: providerName,
+		Model:    modelName,
+		Stream:   flagStream,
+	})
 	if err != nil {
 		logger.Error("Error generating PR body: %v", err)
 		logger.Info("Creating PR with empty body...")
@@ -147,7 +162,11 @@ func createPullRequest(commitMessage string) {
 	}
 
 	// Generate PR title using AI with configurable rules
-	prTitle, err := ollamaClient.GeneratePullRequestTitle(combinedDiff, cfg.PRTitleRules, repoCtx)
+	prTitle, err := providerClient.GeneratePullRequestTitle(context.Background(), combinedDiff, cfg.PRTitleRules, repoCtx, provider.GenerateOptions{
+		Provider: providerName,
+		Model:    modelName,
+		Stream:   flagStream,
+	})
 	if err != nil {
 		logger.Error("Error generating PR title: %v", err)
 		logger.Info("Using commit message as title...")
@@ -266,10 +285,18 @@ var rootCmd = &cobra.Command{
 
 		logger.Info("Analyzing changes...")
 
-		// Generate commit message using Ollama
+		// Generate commit message using AI
 		cfg := config.Get()
-		ollamaClient := ollama.NewClient(&cfg.Ollama)
-		messageText, err := ollamaClient.GenerateCommitMessage(diff, cfg.Rules, repoCtx)
+		providerName, modelName := cfg.ResolveProviderModel(flagProvider, flagModel)
+		providerClient := provider.NewClient(cfg)
+		if !flagStream {
+			providerClient = provider.NewClientWithStreaming(cfg, false)
+		}
+		messageText, err := providerClient.GenerateCommitMessage(context.Background(), diff, cfg.Rules, repoCtx, provider.GenerateOptions{
+			Provider: providerName,
+			Model:    modelName,
+			Stream:   flagStream,
+		})
 		if err != nil {
 			logger.Fatal("Error generating commit message: %v", err)
 		}
@@ -388,6 +415,9 @@ func init() {
 	rootCmd.Flags().BoolVarP(&yolo, "yolo", "y", false, "Automatically stage all changes, commit, and push without confirmation")
 	rootCmd.Flags().BoolVarP(&add, "add", "a", false, "Stage all changes before committing")
 	rootCmd.Flags().BoolVar(&pr, "pr", false, "Create pull request after committing")
+	rootCmd.PersistentFlags().StringVar(&flagProvider, "provider", "", "Specify provider (overrides config/default)")
+	rootCmd.PersistentFlags().StringVar(&flagModel, "model", "", "Specify model (overrides config/default)")
+	rootCmd.PersistentFlags().BoolVar(&flagStream, "stream", true, "Enable streaming output (token-by-token)")
 }
 
 // initConfig initializes the configuration
