@@ -6,7 +6,6 @@ import (
 
 	"github.com/madflow/kommit/internal/config"
 	"github.com/madflow/kommit/internal/git"
-	"github.com/madflow/kommit/internal/logger"
 	"github.com/openai/openai-go/v3"
 )
 
@@ -184,10 +183,4 @@ func (c *Client) generateStreamingCompletion(ctx context.Context, providerName, 
 	}
 
 	return fullResponse, nil
-}
-
-func (c *Client) generateStreamingCompletionWithPrint(ctx context.Context, providerName, modelID, prompt string) (string, error) {
-	return c.generateStreamingCompletion(ctx, providerName, modelID, prompt, func(chunk string) {
-		logger.Printf("%s", chunk)
-	})
 }
