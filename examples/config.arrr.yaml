@@ -6,12 +6,20 @@
 # - $HOME/.config/kommit/config.yaml
 # - $HOME/.kommit.yaml
 
-# Ollama API configuration
-ollama:
-  # URL of the Ollama API server
-  server_url: "http://localhost:11434/api/generate"
-  # Model to use for generating commit messages
-  model: "qwen2.5-coder:7b"
+providers:
+  ollama:
+    name: "Ollama"
+    base_url: "http://localhost:11434/v1/"
+    type: "openai-compat"
+    models:
+      - name: "Qwen 2.5 Coder 7B"
+        id: "qwen2.5-coder:7b"
+        context_window: 32768
+        default_max_tokens: 4096
+
+# Optional: set default provider/model (if not set, first provider/model is used)
+default_provider: "ollama"
+default_model: "qwen2.5-coder:7b"
 
 # Rules for generating commit messages (be creative and funny!)
 rules: |
@@ -30,7 +38,7 @@ rules: |
   - perf: A code change that improves performance
   - test: Adding missing tests or correcting existing tests
   - chore: Changes to the build process or auxiliary tools and libraries
-
+  
   - Write the text in first line after the <type> as if a pirate explaining the changes 
   - In the body, include:
     * What was broken (if anything) in pirate terms
@@ -66,14 +74,6 @@ pr_rules: |
 
 # Rules for generating pull request titles (pirate style!)
 pr_title_rules: |
-  Expected output format:
-
-  ---
-  Brief descriptive title
-  ---
-
-  Do not deviate from this format.
-
   - Create a swashbuckling and descriptive pull request title.
   - Maximum length: 80 characters (aim for under 50 characters, ye scallywag).
   - Use imperative mood ("Fix plank" not "Fixed plank" or "Fixes plank").

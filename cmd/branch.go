@@ -1,13 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"regexp"
 	"strings"
 
 	"github.com/madflow/kommit/internal/config"
 	"github.com/madflow/kommit/internal/git"
 	"github.com/madflow/kommit/internal/logger"
-	"github.com/madflow/kommit/internal/ollama"
+	"github.com/madflow/kommit/internal/provider"
 	"github.com/spf13/cobra"
 )
 
@@ -55,8 +56,13 @@ var branchCmd = &cobra.Command{
 		logger.Info("Analyzing changes to generate a branch name...")
 
 		cfg := config.Get()
-		ollamaClient := ollama.NewClient(&cfg.Ollama)
-		branchName, err := ollamaClient.GenerateBranchName(diff)
+		providerName, modelName := cfg.ResolveProviderModel("", "")
+		providerClient := provider.NewClient(cfg)
+		branchName, err := providerClient.GenerateBranchName(context.Background(), diff, provider.GenerateOptions{
+			Provider: providerName,
+			Model:    modelName,
+			Stream:   false,
+		})
 		if err != nil {
 			logger.Fatal("Error generating branch name: %v", err)
 		}
