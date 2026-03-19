@@ -27,10 +27,6 @@ var (
 	flagStream   bool
 )
 
-type CommitMessage struct {
-	Message string
-}
-
 // yoloCommit performs an automatic commit and push without confirmation
 func yoloCommit(message string) {
 	logger.Info("🚀 YOLO mode enabled - Automatically committing and pushing changes")
@@ -227,15 +223,8 @@ var rootCmd = &cobra.Command{
 			logger.Fatal("Not in a git repository")
 		}
 
-		// If add flag is set, stage all changes
-		if add {
-			if err := git.AddAll(); err != nil {
-				logger.Fatal("Error staging changes: %v", err)
-			}
-		}
-
-		// In yolo mode, stage all changes first, then check for staged changes
-		if yolo {
+		// Stage all changes if --add or --yolo flag is set
+		if add || yolo {
 			if err := git.AddAll(); err != nil {
 				logger.Fatal("Error staging changes: %v", err)
 			}
@@ -300,83 +289,43 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			logger.Fatal("Error generating commit message: %v", err)
 		}
-		message := &CommitMessage{
-			Message: strings.TrimSpace(messageText),
-		}
+		message := strings.TrimSpace(messageText)
 
 		// Display generated message
 		logger.Println("\n📝 Generated Commit Message:")
-		logger.Printf("%s\n\n", message.Message)
+		logger.Printf("%s\n\n", message)
 
 		if yolo {
-			yoloCommit(message.Message)
-		} else {
-			// Loop until user confirms or cancels
-			for {
-				switch askForConfirmation() {
-				case "no":
-					logger.Error("Commit cancelled by user")
-					return
-				case "edit":
-					tempFile, err := os.CreateTemp("", "kommit-*.md")
-					if err != nil {
-						logger.Fatal("Error creating temporary file: %v", err)
-					}
-					defer os.Remove(tempFile.Name())
+			yoloCommit(message)
+			return
+		}
 
-					// Write the current message to the temp file
-					if _, err := tempFile.WriteString(message.Message); err != nil {
-						tempFile.Close()
-						logger.Fatal("Error writing to temporary file: %v", err)
-					}
-					tempFile.Close()
-
-					// Open the editor
-					editor := os.Getenv("EDITOR")
-					if editor == "" {
-						editor = "vi" // Default to vi if no editor is set
-					}
-
-					// Execute the editor
-					cmd := exec.Command(editor, tempFile.Name())
-					cmd.Stdin = os.Stdin
-					cmd.Stdout = os.Stdout
-					cmd.Stderr = os.Stderr
-
-					if err := cmd.Run(); err != nil {
-						logger.Fatal("Error opening editor: %v", err)
-					}
-
-					// Read the edited message
-					editedMessage, err := os.ReadFile(tempFile.Name())
-					if err != nil {
-						logger.Fatal("Error reading edited message: %v", err)
-					}
-
-					message.Message = strings.TrimSpace(string(editedMessage))
-					logger.Println("\n📝 Updated Commit Message:")
-					logger.Printf("%s\n\n", message.Message)
-					continue // Go back to the confirmation prompt
-
-				case "yes":
-					// Break out of the loop to proceed with the commit
-					goto commit
-				}
+		// Interactive confirmation loop
+		for {
+			action := askForConfirmation()
+			if action == "no" {
+				logger.Error("Commit cancelled by user")
+				return
 			}
-
-		commit:
-
-			// Commit the changes
-			if err := git.CommitChanges(message.Message); err != nil {
-				logger.Fatal("Error committing changes: %v", err)
+			if action == "yes" {
+				break
 			}
+			// action == "edit"
+			message = editCommitMessage(message)
+			logger.Println("\n📝 Updated Commit Message:")
+			logger.Printf("%s\n\n", message)
+		}
 
-			logger.Success("Changes committed successfully!")
+		// Commit the changes
+		if err := git.CommitChanges(message); err != nil {
+			logger.Fatal("Error committing changes: %v", err)
+		}
 
-			// Create pull request if -pr flag is set
-			if pr {
-				createPullRequest(message.Message)
-			}
+		logger.Success("Changes committed successfully!")
+
+		// Create pull request if -pr flag is set
+		if pr {
+			createPullRequest(message)
 		}
 	},
 }
@@ -418,6 +367,46 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&flagProvider, "provider", "", "Specify provider (overrides config/default)")
 	rootCmd.PersistentFlags().StringVar(&flagModel, "model", "", "Specify model (overrides config/default)")
 	rootCmd.PersistentFlags().BoolVar(&flagStream, "stream", true, "Enable streaming output (token-by-token)")
+}
+
+// editCommitMessage opens a text editor to edit the commit message and returns the edited message
+func editCommitMessage(message string) string {
+	tempFile, err := os.CreateTemp("", "kommit-*.md")
+	if err != nil {
+		logger.Fatal("Error creating temporary file: %v", err)
+	}
+	defer os.Remove(tempFile.Name())
+
+	// Write the current message to the temp file
+	if _, err := tempFile.WriteString(message); err != nil {
+		tempFile.Close()
+		logger.Fatal("Error writing to temporary file: %v", err)
+	}
+	tempFile.Close()
+
+	// Open the editor
+	editor := os.Getenv("EDITOR")
+	if editor == "" {
+		editor = "vi" // Default to vi if no editor is set
+	}
+
+	// Execute the editor
+	cmd := exec.Command(editor, tempFile.Name())
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		logger.Fatal("Error opening editor: %v", err)
+	}
+
+	// Read the edited message
+	editedMessage, err := os.ReadFile(tempFile.Name())
+	if err != nil {
+		logger.Fatal("Error reading edited message: %v", err)
+	}
+
+	return strings.TrimSpace(string(editedMessage))
 }
 
 // initConfig initializes the configuration
