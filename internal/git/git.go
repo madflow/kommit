@@ -14,12 +14,6 @@ func IsGitRepo() bool {
 	return cmd.Run() == nil
 }
 
-func GetGitStatus() (string, error) {
-	cmd := exec.Command("git", "status", "-v")
-	output, err := cmd.Output()
-	return string(output), err
-}
-
 // GetGitDiff returns the diff of changes that are currently staged for commit.
 // It only shows changes that have been added to the staging area with 'git add'.
 func GetGitDiff() (string, error) {
@@ -35,7 +29,6 @@ func GetGitDiff() (string, error) {
 // It returns true if there are staged changes, false otherwise.
 // If there is an error running the git command, it returns false and the error.
 func HasStagedChanges() (bool, error) {
-	// Use execCommand to allow mocking in tests
 	cmd := execCommand("git", "diff-index", "--cached", "HEAD", "--")
 	output, err := cmd.Output()
 	if err != nil {
@@ -54,11 +47,6 @@ func HasStagedChanges() (bool, error) {
 
 	// If there are staged changes, there will be output lines
 	return strings.TrimSpace(string(output)) != "", nil
-}
-
-func StageAllChanges() error {
-	cmd := exec.Command("git", "add", ".")
-	return cmd.Run()
 }
 
 func CommitChanges(message string) error {
@@ -89,19 +77,6 @@ func GetGitDir() (string, error) {
 func AddAll() error {
 	cmd := execCommand("git", "add", ".")
 	return cmd.Run()
-}
-
-// HasAnyChanges checks if there are any changes in the working directory (staged or unstaged).
-func HasAnyChanges() (bool, error) {
-	// Check for any changes in the working tree (unstaged changes)
-	cmd := execCommand("git", "diff", "--quiet")
-	unstagedChanges := cmd.Run() != nil
-
-	// Check for any staged changes
-	cmd = execCommand("git", "diff", "--cached", "--quiet")
-	stagedChanges := cmd.Run() != nil
-
-	return unstagedChanges || stagedChanges, nil
 }
 
 // PushCurrentBranch pushes the current branch to its remote tracking branch.
