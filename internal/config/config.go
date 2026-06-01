@@ -72,8 +72,8 @@ func DefaultConfig() *Config {
 				Type:    "openai-compat",
 				Models: []ModelConfig{
 					{
-						Name:             "Qwen 2.5 Coder 7B",
-						ID:               "qwen2.5-coder:7b",
+						Name:             "gemma4:e4b",
+						ID:               "gemma4:e4b",
 						ContextWindow:    32768,
 						DefaultMaxTokens: 4096,
 					},
@@ -81,7 +81,7 @@ func DefaultConfig() *Config {
 			},
 		},
 		DefaultProvider: "ollama",
-		DefaultModel:    "qwen2.5-coder:7b",
+		DefaultModel:    "gemma4:e4b",
 		Rules: `
 		Expected output format:
 
