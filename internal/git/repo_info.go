@@ -2,7 +2,6 @@ package git
 
 import (
 	"fmt"
-	"os/exec"
 	"strings"
 )
 
@@ -21,21 +20,16 @@ type FileChange struct {
 	FileType string
 }
 
-// GetRepoContext returns the current repository context including branch, changes, etc.
-func GetRepoContext() (*RepoContext, error) {
+func (r *Repository) loadRepoContext() (*RepoContext, error) {
 	ctx := &RepoContext{}
 
-	// Get current branch name
-	branchCmd := exec.Command("git", "branch", "--show-current")
-	branchOut, err := branchCmd.Output()
+	branchOut, err := r.runnerOrDefault().Output("git", "branch", "--show-current")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get branch name: %w", err)
 	}
 	ctx.BranchName = strings.TrimSpace(string(branchOut))
 
-	// Get number of changed files
-	countCmd := exec.Command("git", "diff", "--staged", "--name-only")
-	countOut, err := countCmd.Output()
+	countOut, err := r.runnerOrDefault().Output("git", "diff", "--staged", "--name-only")
 	if err != nil {
 		return nil, fmt.Errorf("failed to count changed files: %w", err)
 	}
@@ -46,27 +40,21 @@ func GetRepoContext() (*RepoContext, error) {
 		ctx.FilesChanged = len(files)
 	}
 
-	// Get change summary
-	summaryCmd := exec.Command("git", "diff", "--staged", "--stat")
-	summaryOut, err := summaryCmd.Output()
+	summaryOut, err := r.runnerOrDefault().Output("git", "diff", "--staged", "--stat")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get change summary: %w", err)
 	}
 	ctx.ChangeSummary = string(summaryOut)
 
-	// Get detailed file changes
-	changesCmd := exec.Command("git", "diff", "--staged", "--name-status")
-	changesOut, err := changesCmd.Output()
+	changesOut, err := r.runnerOrDefault().Output("git", "diff", "--staged", "--name-status")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get file changes: %w", err)
 	}
 
-	changes := strings.SplitSeq(strings.TrimSpace(string(changesOut)), "\n")
-	for change := range changes {
+	for _, change := range strings.Split(strings.TrimSpace(string(changesOut)), "\n") {
 		if change == "" {
 			continue
 		}
-		// Split on tab to separate status and file path
 		parts := strings.Fields(change)
 		if len(parts) < 2 {
 			continue
@@ -74,7 +62,6 @@ func GetRepoContext() (*RepoContext, error) {
 		status := parts[0]
 		filePath := parts[1]
 
-		// Get file extension
 		fileType := ""
 		if dotIndex := strings.LastIndex(filePath, "."); dotIndex != -1 && dotIndex < len(filePath)-1 {
 			fileType = filePath[dotIndex+1:]

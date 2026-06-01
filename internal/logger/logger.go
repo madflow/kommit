@@ -39,17 +39,6 @@ func (l *Logger) Error(format string, args ...any) {
 	fmt.Fprintf(os.Stderr, "❌ %s\n", msg)
 }
 
-// Fatal prints an error message to stderr and exits with status code 1
-func (l *Logger) Fatal(format string, args ...any) {
-	l.Error(format, args...)
-	os.Exit(1)
-}
-
-// Fatalf is equivalent to Error followed by a call to os.Exit(1)
-func (l *Logger) Fatalf(format string, args ...any) {
-	l.Fatal(format, args...)
-}
-
 // Printf formats according to a format specifier and writes to stdout
 func (l *Logger) Printf(format string, args ...any) {
 	fmt.Printf(format, args...)
@@ -81,16 +70,6 @@ func Warning(format string, args ...any) {
 // Error prints an error message using the default logger
 func Error(format string, args ...any) {
 	defaultLogger.Error(format, args...)
-}
-
-// Fatal prints an error message and exits with status code 1 using the default logger
-func Fatal(format string, args ...any) {
-	defaultLogger.Fatal(format, args...)
-}
-
-// Fatalf is equivalent to Error followed by a call to os.Exit(1) using the default logger
-func Fatalf(format string, args ...any) {
-	defaultLogger.Fatalf(format, args...)
 }
 
 // Printf formats according to a format specifier and writes to stdout using the default logger

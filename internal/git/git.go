@@ -1,171 +1,228 @@
 package git
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
 )
 
-// execCommand is defined as a variable so it can be mocked in tests
-var execCommand = exec.Command
+var (
+	ErrNotGitRepository            = errors.New("not in a git repository")
+	ErrOriginMainBranchUnavailable = errors.New("origin main branch is unavailable")
+)
 
-func IsGitRepo() bool {
-	cmd := execCommand("git", "rev-parse", "--git-dir")
-	return cmd.Run() == nil
+type PullRequestSkipReason string
+
+const (
+	PullRequestSkipNone              PullRequestSkipReason = ""
+	PullRequestSkipNotGitHub         PullRequestSkipReason = "not_github"
+	PullRequestSkipMainBranch        PullRequestSkipReason = "main_branch"
+	PullRequestSkipGhUnavailable     PullRequestSkipReason = "gh_unavailable"
+	PullRequestSkipGhUnauthenticated PullRequestSkipReason = "gh_unauthenticated"
+)
+
+type StagedSnapshot struct {
+	HasChanges bool
+	Diff       string
+	Context    *RepoContext
 }
 
-// GetGitDiff returns the diff of changes that are currently staged for commit.
-// It only shows changes that have been added to the staging area with 'git add'.
-func GetGitDiff() (string, error) {
-	cmd := execCommand("git", "diff", "--cached")
-	output, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-	return string(output), nil
+type PullRequestPreparation struct {
+	CurrentBranch string
+	MainBranch    string
+	CombinedDiff  string
+	SkipReason    PullRequestSkipReason
 }
 
-// HasStagedChanges checks if there are any staged changes in the git repository.
-// It returns true if there are staged changes, false otherwise.
-// If there is an error running the git command, it returns false and the error.
-func HasStagedChanges() (bool, error) {
-	cmd := execCommand("git", "diff-index", "--cached", "HEAD", "--")
-	output, err := cmd.Output()
-	if err != nil {
-		// If HEAD doesn't exist yet (new repository), check if there are any files in the index
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 128 {
-			// Try to list files in the index directly
-			cmd = execCommand("git", "ls-files", "--cached", "--error-unmatch", ".")
-			_, err := cmd.Output()
-			if err == nil {
-				return true, nil // Files are staged but no HEAD yet
-			}
-			return false, nil // No files in index
-		}
-		return false, err
-	}
-
-	// If there are staged changes, there will be output lines
-	return strings.TrimSpace(string(output)) != "", nil
+type commandRunner interface {
+	Output(name string, args ...string) ([]byte, error)
+	CombinedOutput(name string, args ...string) ([]byte, error)
+	Run(name string, args ...string) error
 }
 
-func CommitChanges(message string) error {
-	cmd := execCommand("git", "commit", "-m", message)
-	return cmd.Run()
+type execRunner struct{}
+
+func (execRunner) Output(name string, args ...string) ([]byte, error) {
+	return exec.Command(name, args...).Output()
 }
 
-// GetGitDir returns the absolute path to the root directory of the current git repository.
-// Returns an empty string if not in a git repository.
+func (execRunner) CombinedOutput(name string, args ...string) ([]byte, error) {
+	return exec.Command(name, args...).CombinedOutput()
+}
+
+func (execRunner) Run(name string, args ...string) error {
+	return exec.Command(name, args...).Run()
+}
+
+type Repository struct {
+	runner commandRunner
+}
+
+func Current() *Repository {
+	return &Repository{runner: execRunner{}}
+}
+
 func GetGitDir() (string, error) {
-	// First try to get the git directory to check if we're in a git repo
-	cmd := execCommand("git", "rev-parse", "--absolute-git-dir")
-	_, err := cmd.Output()
+	return Current().GitDir()
+}
+
+func (r *Repository) EnsureRepository() error {
+	if err := r.runnerOrDefault().Run("git", "rev-parse", "--git-dir"); err != nil {
+		return ErrNotGitRepository
+	}
+
+	return nil
+}
+
+func (r *Repository) GitDir() (string, error) {
+	if err := r.EnsureRepository(); err != nil {
+		return "", err
+	}
+
+	output, err := r.runnerOrDefault().Output("git", "rev-parse", "--show-toplevel")
 	if err != nil {
 		return "", err
 	}
 
-	// Now get the root directory of the repository
-	cmd = execCommand("git", "rev-parse", "--show-toplevel")
-	output, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
 	return strings.TrimSpace(string(output)), nil
 }
 
-// AddAll stages all changes in the working directory for commit.
-func AddAll() error {
-	cmd := execCommand("git", "add", ".")
-	return cmd.Run()
+func (r *Repository) StageAll() error {
+	return r.runnerOrDefault().Run("git", "add", ".")
 }
 
-// PushCurrentBranch pushes the current branch to its remote tracking branch.
-func PushCurrentBranch() error {
-	// First, get the current branch name
-	cmd := execCommand("git", "rev-parse", "--abbrev-ref", "HEAD")
-	output, err := cmd.Output()
+func (r *Repository) LoadStagedSnapshot() (*StagedSnapshot, error) {
+	if err := r.EnsureRepository(); err != nil {
+		return nil, err
+	}
+
+	repoCtx, err := r.loadRepoContext()
+	if err != nil {
+		return nil, err
+	}
+
+	diff, err := r.stagedDiff()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get staged diff: %w", err)
+	}
+
+	return &StagedSnapshot{
+		HasChanges: repoCtx.FilesChanged > 0,
+		Diff:       diff,
+		Context:    repoCtx,
+	}, nil
+}
+
+func (r *Repository) Commit(message string) error {
+	return r.runnerOrDefault().Run("git", "commit", "-m", message)
+}
+
+func (r *Repository) PublishCurrentBranch() error {
+	branch, err := r.currentBranch()
 	if err != nil {
 		return err
 	}
-	branch := strings.TrimSpace(string(output))
 
-	// Push the current branch to its upstream branch
-	pushCmd := execCommand("git", "push", "--set-upstream", "origin", branch)
-	return pushCmd.Run()
+	return r.runnerOrDefault().Run("git", "push", "--set-upstream", "origin", branch)
 }
 
-func CreateBranch(branchName string) error {
-	cmd := execCommand("git", "checkout", "-b", branchName)
-	return cmd.Run()
+func (r *Repository) CreateBranch(branchName string) error {
+	return r.runnerOrDefault().Run("git", "checkout", "-b", branchName)
 }
 
-// IsGitHubRepo checks if the current repository is hosted on GitHub
-// by checking the origin remote URL.
-func IsGitHubRepo() (bool, error) {
-	cmd := execCommand("git", "remote", "get-url", "origin")
-	output, err := cmd.Output()
-	if err != nil {
-		return false, err
+func (r *Repository) PreparePullRequest(localDiff string) (*PullRequestPreparation, error) {
+	if err := r.EnsureRepository(); err != nil {
+		return nil, err
 	}
 
-	remoteURL := strings.TrimSpace(string(output))
-	return strings.Contains(remoteURL, "github.com"), nil
+	isGitHubRepo, err := r.isGitHubRepo()
+	if err != nil {
+		return nil, fmt.Errorf("check GitHub repository: %w", err)
+	}
+	if !isGitHubRepo {
+		return &PullRequestPreparation{SkipReason: PullRequestSkipNotGitHub}, nil
+	}
+
+	currentBranch, err := r.currentBranch()
+	if err != nil {
+		return nil, fmt.Errorf("get current branch: %w", err)
+	}
+
+	mainBranch, err := r.originMainBranch()
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrOriginMainBranchUnavailable, err)
+	}
+
+	preparation := &PullRequestPreparation{
+		CurrentBranch: currentBranch,
+		MainBranch:    mainBranch,
+	}
+
+	if currentBranch == mainBranch {
+		preparation.SkipReason = PullRequestSkipMainBranch
+		return preparation, nil
+	}
+
+	if !r.isGhCliAvailable() {
+		preparation.SkipReason = PullRequestSkipGhUnavailable
+		return preparation, nil
+	}
+
+	if !r.isGhAuthenticated() {
+		preparation.SkipReason = PullRequestSkipGhUnauthenticated
+		return preparation, nil
+	}
+
+	remoteDiff, err := r.diffFromOriginMain(mainBranch)
+	if err != nil {
+		return nil, fmt.Errorf("get remote diff: %w", err)
+	}
+
+	preparation.CombinedDiff = fmt.Sprintf("=== LOCAL CHANGES (staged) ===\n%s\n\n=== REMOTE CHANGES (since %s) ===\n%s", localDiff, mainBranch, remoteDiff)
+	return preparation, nil
 }
 
-// IsGhCliAvailable checks if the gh CLI tool is available on the system.
-func IsGhCliAvailable() bool {
-	cmd := execCommand("gh", "--version")
-	return cmd.Run() == nil
-}
-
-// IsGhAuthenticated checks if the gh CLI is authenticated.
-func IsGhAuthenticated() bool {
-	cmd := execCommand("gh", "auth", "status")
-	return cmd.Run() == nil
-}
-
-// CreatePullRequest creates a pull request using the gh CLI.
-// It returns the URL of the created pull request and an error if the operation fails.
-func CreatePullRequest(title string, body string) (string, error) {
+func (r *Repository) CreatePullRequest(title string, body string) (string, error) {
 	var args []string
 	if body != "" {
 		args = []string{"pr", "create", "--title", title, "--body", body}
 	} else {
-		// Use --fill flag to automatically use commit info when no body is provided
 		args = []string{"pr", "create", "--fill"}
 	}
 
-	cmd := execCommand("gh", args...)
-	output, err := cmd.CombinedOutput()
+	output, err := r.runnerOrDefault().CombinedOutput("gh", args...)
 	if err != nil {
 		return "", fmt.Errorf("gh pr create failed: %v\nOutput: %s", err, string(output))
 	}
 
-	// Extract the URL from the output (gh pr create returns the PR URL)
-	url := strings.TrimSpace(string(output))
-	return url, nil
-}
-
-// GetCurrentBranch returns the name of the current git branch.
-func GetCurrentBranch() (string, error) {
-	cmd := execCommand("git", "rev-parse", "--abbrev-ref", "HEAD")
-	output, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
 	return strings.TrimSpace(string(output)), nil
 }
 
-// GetOriginMainBranch returns the name of the main branch on origin remote.
-// It uses the command: git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'
-func GetOriginMainBranch() (string, error) {
-	cmd := execCommand("git", "symbolic-ref", "refs/remotes/origin/HEAD")
-	output, err := cmd.Output()
+func (r *Repository) stagedDiff() (string, error) {
+	output, err := r.runnerOrDefault().Output("git", "diff", "--cached")
 	if err != nil {
 		return "", err
 	}
 
-	// Remove the "refs/remotes/origin/" prefix
+	return string(output), nil
+}
+
+func (r *Repository) currentBranch() (string, error) {
+	output, err := r.runnerOrDefault().Output("git", "rev-parse", "--abbrev-ref", "HEAD")
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(output)), nil
+}
+
+func (r *Repository) originMainBranch() (string, error) {
+	output, err := r.runnerOrDefault().Output("git", "symbolic-ref", "refs/remotes/origin/HEAD")
+	if err != nil {
+		return "", err
+	}
+
 	fullRef := strings.TrimSpace(string(output))
 	prefix := "refs/remotes/origin/"
 	if after, ok := strings.CutPrefix(fullRef, prefix); ok {
@@ -175,13 +232,36 @@ func GetOriginMainBranch() (string, error) {
 	return fullRef, nil
 }
 
-// GetDiffFromOriginMain returns the diff between the current branch and origin/main.
-// mainBranch should be the name of the main branch (e.g., "main", "master").
-func GetDiffFromOriginMain(mainBranch string) (string, error) {
-	cmd := execCommand("git", "diff", fmt.Sprintf("origin/%s...HEAD", mainBranch))
-	output, err := cmd.Output()
+func (r *Repository) diffFromOriginMain(mainBranch string) (string, error) {
+	output, err := r.runnerOrDefault().Output("git", "diff", fmt.Sprintf("origin/%s...HEAD", mainBranch))
 	if err != nil {
 		return "", err
 	}
+
 	return string(output), nil
+}
+
+func (r *Repository) isGitHubRepo() (bool, error) {
+	output, err := r.runnerOrDefault().Output("git", "remote", "get-url", "origin")
+	if err != nil {
+		return false, err
+	}
+
+	return strings.Contains(strings.TrimSpace(string(output)), "github.com"), nil
+}
+
+func (r *Repository) isGhCliAvailable() bool {
+	return r.runnerOrDefault().Run("gh", "--version") == nil
+}
+
+func (r *Repository) isGhAuthenticated() bool {
+	return r.runnerOrDefault().Run("gh", "auth", "status") == nil
+}
+
+func (r *Repository) runnerOrDefault() commandRunner {
+	if r != nil && r.runner != nil {
+		return r.runner
+	}
+
+	return execRunner{}
 }

@@ -1,19 +1,13 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"os"
-	"os/exec"
-	"strings"
 
 	"github.com/madflow/kommit/internal/config"
-	"github.com/madflow/kommit/internal/git"
 	"github.com/madflow/kommit/internal/logger"
-	"github.com/madflow/kommit/internal/provider"
+	"github.com/madflow/kommit/internal/workflow"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var (
@@ -25,341 +19,48 @@ var (
 	flagProvider string
 	flagModel    string
 	flagStream   bool
+
+	configInit = config.Init
+	configGet  = config.Get
 )
-
-// yoloCommit performs an automatic commit and push without confirmation
-func yoloCommit(message string) {
-	logger.Info("🚀 YOLO mode enabled - Automatically committing and pushing changes")
-
-	// Commit the changes (changes already staged in the main flow)
-	if err := git.CommitChanges(message); err != nil {
-		logger.Fatal("Error committing changes: %v", err)
-	}
-
-	// Push to remote
-	if err := git.PushCurrentBranch(); err != nil {
-		logger.Fatal("Error pushing changes: %v", err)
-	}
-
-	logger.Success("Changes committed and pushed successfully!")
-
-	// Create pull request if -pr flag is set
-	if pr {
-		createPullRequest(message)
-	}
-}
-
-// createPullRequest creates a pull request using the gh CLI
-func createPullRequest(commitMessage string) {
-	// Check if this is a GitHub repository
-	isGitHub, err := git.IsGitHubRepo()
-	if err != nil {
-		logger.Error("Error checking if repository is on GitHub: %v", err)
-		return
-	}
-
-	if !isGitHub {
-		logger.Error("This repository is not hosted on GitHub")
-		return
-	}
-
-	// Get current branch
-	currentBranch, err := git.GetCurrentBranch()
-	if err != nil {
-		logger.Error("Error getting current branch: %v", err)
-		return
-	}
-
-	// Detect the origin main branch name
-	originMainBranch, err := git.GetOriginMainBranch()
-	if err != nil {
-		logger.Error("Error detecting origin main branch: %v", err)
-		logger.Info("Make sure remote tracking is set up: git remote set-head origin -a")
-		return
-	}
-
-	// If current branch is the origin main branch, do nothing
-	if currentBranch == originMainBranch {
-		logger.Info("Current branch (%s) is the main branch. --pr flag has no effect.", currentBranch)
-		return
-	}
-
-	// Check if gh CLI is available
-	if !git.IsGhCliAvailable() {
-		logger.Error("GitHub CLI (gh) is not installed or not available in PATH")
-		logger.Info("Install it from: https://cli.github.com/")
-		return
-	}
-
-	// Check if gh is authenticated
-	if !git.IsGhAuthenticated() {
-		logger.Error("GitHub CLI is not authenticated")
-		logger.Info("Run 'gh auth login' to authenticate")
-		return
-	}
-
-	// Push the current branch to remote if not in yolo mode
-	if !yolo {
-		logger.Info("Pushing current branch to remote...")
-		if err := git.PushCurrentBranch(); err != nil {
-			logger.Error("Error pushing branch: %v", err)
-			return
-		}
-	}
-
-	logger.Info("Creating pull request...")
-
-	// Get repository context for PR body generation
-	repoCtx, err := git.GetRepoContext()
-	if err != nil {
-		logger.Error("Error getting repository context: %v", err)
-		return
-	}
-
-	// Get the local staged diff (current changes)
-	localDiff, err := git.GetGitDiff()
-	if err != nil {
-		logger.Error("Error getting local diff: %v", err)
-		return
-	}
-
-	// Get the remote diff (changes from origin main to current branch)
-	remoteDiff, err := git.GetDiffFromOriginMain(originMainBranch)
-	if err != nil {
-		logger.Error("Error getting remote diff: %v", err)
-		return
-	}
-
-	// Combine local and remote diffs for PR generation
-	combinedDiff := fmt.Sprintf("=== LOCAL CHANGES (staged) ===\n%s\n\n=== REMOTE CHANGES (since %s) ===\n%s", localDiff, originMainBranch, remoteDiff)
-
-	// Get the configuration for PR rules
-	cfg := config.Get()
-
-	// Get provider and model from flags, env, or config
-	providerName, modelName := cfg.ResolveProviderModel(flagProvider, flagModel)
-
-	// Create provider client for PR body generation
-	providerClient := provider.NewClient(cfg)
-	if !flagStream {
-		providerClient = provider.NewClientWithStreaming(cfg, false)
-	}
-
-	// Generate PR body using AI with combined diff
-	prBody, err := providerClient.GeneratePullRequestBody(context.Background(), combinedDiff, cfg.PRRules, repoCtx, provider.GenerateOptions{
-		Provider: providerName,
-		Model:    modelName,
-		Stream:   flagStream,
-	})
-	if err != nil {
-		logger.Error("Error generating PR body: %v", err)
-		logger.Info("Creating PR with empty body...")
-		prBody = ""
-	}
-
-	// Generate PR title using AI with configurable rules
-	prTitle, err := providerClient.GeneratePullRequestTitle(context.Background(), combinedDiff, cfg.PRTitleRules, repoCtx, provider.GenerateOptions{
-		Provider: providerName,
-		Model:    modelName,
-		Stream:   flagStream,
-	})
-	if err != nil {
-		logger.Error("Error generating PR title: %v", err)
-		logger.Info("Using commit message as title...")
-		// Fallback: use first line of commit message, truncated to reasonable length
-		prTitle = commitMessage
-		maxLength := 50 // Default fallback
-
-		// Try to extract max length from PR title rules if specified
-		if strings.Contains(cfg.PRTitleRules, "Maximum length:") {
-			parts := strings.Split(cfg.PRTitleRules, "Maximum length:")
-			if len(parts) > 1 {
-				lengthPart := strings.Split(parts[1], "characters")[0]
-				lengthStr := strings.TrimSpace(lengthPart)
-				if len(lengthStr) > 0 {
-					var numStr string
-					for _, char := range lengthStr {
-						if char >= '0' && char <= '9' {
-							numStr += string(char)
-						} else {
-							break
-						}
-					}
-					if numStr != "" {
-						if parsed, err := fmt.Sscanf(numStr, "%d", &maxLength); err != nil || parsed != 1 {
-							maxLength = 50 // Keep default on parse error
-						}
-					}
-				}
-			}
-		}
-
-		if len(prTitle) > maxLength {
-			prTitle = prTitle[:maxLength-3] + "..."
-		}
-	}
-
-	// Create the pull request with generated title and body
-	prUrl, err := git.CreatePullRequest(prTitle, prBody)
-	if err != nil {
-		logger.Error("Error creating pull request: %v", err)
-		return
-	}
-
-	logger.Success("Pull request created successfully!")
-	logger.Info("URL: %s", prUrl)
-}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "kommit",
 	Short: "Git commits for the rest of us",
-	Run: func(cmd *cobra.Command, args []string) {
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		return initializeConfig()
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
 		logger.Println("🤖 Kommit")
 		logger.Println("================================")
 
-		// Check if we're in a git repository
-		if !git.IsGitRepo() {
-			logger.Fatal("Not in a git repository")
-		}
-
-		// Stage all changes if --add or --yolo flag is set
-		if add || yolo {
-			if err := git.AddAll(); err != nil {
-				logger.Fatal("Error staging changes: %v", err)
-			}
-		}
-
-		// Check for staged changes to commit
-		hasChanges, err := git.HasStagedChanges()
-		if err != nil {
-			logger.Fatal("Error checking for changes: %v", err)
-		}
-
-		if !hasChanges {
-			logger.Success("No changes to commit")
-			return
-		}
-
-		// Get repository context
-		repoCtx, err := git.GetRepoContext()
-		if err != nil {
-			logger.Fatal("Error getting repository context: %v", err)
-		}
-
-		// Display repository context
-		logger.Println("📊 Repository Context:")
-		logger.Printf("Branch name: %s\n", repoCtx.BranchName)
-		logger.Printf("Files changed: %d\n", repoCtx.FilesChanged)
-
-		if repoCtx.FilesChanged > 0 {
-			logger.Println("\n📝 Change Summary:")
-			logger.Println(repoCtx.ChangeSummary)
-
-			if len(repoCtx.FileChanges) > 0 {
-				logger.Println("\n📋 File Changes:")
-				for _, change := range repoCtx.FileChanges {
-					logger.Printf("[%s] %s (%s)\n", change.Status, change.FilePath, change.FileType)
-				}
-			}
-		}
-
-		logger.Println()
-
-		// Get git diff for AI analysis
-		diff, err := git.GetGitDiff()
-		if err != nil {
-			logger.Fatal("Error getting git diff: %v", err)
-		}
-
-		logger.Info("Analyzing changes...")
-
-		// Generate commit message using AI
-		cfg := config.Get()
-		providerName, modelName := cfg.ResolveProviderModel(flagProvider, flagModel)
-		providerClient := provider.NewClient(cfg)
-		if !flagStream {
-			providerClient = provider.NewClientWithStreaming(cfg, false)
-		}
-		messageText, err := providerClient.GenerateCommitMessage(context.Background(), diff, cfg.Rules, repoCtx, provider.GenerateOptions{
-			Provider: providerName,
-			Model:    modelName,
-			Stream:   flagStream,
+		commitWorkflow := workflow.NewCommitWorkflow(configGet(), workflow.CommitDependencies{
+			Prompter: cliCommitPrompter{},
+			Output:   cliWorkflowOutput{},
 		})
-		if err != nil {
-			logger.Fatal("Error generating commit message: %v", err)
-		}
-		message := strings.TrimSpace(messageText)
 
-		// Display generated message
-		logger.Println("\n📝 Generated Commit Message:")
-		logger.Printf("%s\n\n", message)
-
-		if yolo {
-			yoloCommit(message)
-			return
-		}
-
-		// Interactive confirmation loop
-		for {
-			action := askForConfirmation()
-			if action == "no" {
-				logger.Error("Commit cancelled by user")
-				return
-			}
-			if action == "yes" {
-				break
-			}
-			// action == "edit"
-			message = editCommitMessage(message)
-			logger.Println("\n📝 Updated Commit Message:")
-			logger.Printf("%s\n\n", message)
-		}
-
-		// Commit the changes
-		if err := git.CommitChanges(message); err != nil {
-			logger.Fatal("Error committing changes: %v", err)
-		}
-
-		logger.Success("Changes committed successfully!")
-
-		// Create pull request if -pr flag is set
-		if pr {
-			createPullRequest(message)
-		}
+		return commitWorkflow.Run(context.Background(), workflow.CommitRequest{
+			Add:               add,
+			Yolo:              yolo,
+			CreatePullRequest: pr,
+			Generation: workflow.GenerationOptions{
+				Provider: flagProvider,
+				Model:    flagModel,
+				Stream:   flagStream,
+			},
+		})
 	},
 }
 
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
-		logger.Fatal("Command failed: %v", err)
-	}
-}
-
-// askForConfirmation prompts the user to confirm the commit message
-// Returns: "yes", "edit", or "no"
-func askForConfirmation() string {
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		logger.Printf("Do you want to commit with this message? [y/e/N] ")
-		text, _ := reader.ReadString('\n')
-		text = strings.TrimSpace(strings.ToLower(text))
-		switch text {
-		case "y", "yes":
-			return "yes"
-		case "e", "edit":
-			return "edit"
-		case "", "n", "no":
-			return "no"
-		default:
-			logger.Printf("Please enter 'y' for yes, 'e' to edit, or 'N' for no\n")
-		}
+		exitWithError("Command failed: %v", err)
 	}
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $XDG_CONFIG_HOME/kommit/config.yaml or $HOME/.config/kommit/config.yaml)")
 	rootCmd.Flags().BoolVarP(&yolo, "yolo", "y", false, "Automatically stage all changes, commit, and push without confirmation")
 	rootCmd.Flags().BoolVarP(&add, "add", "a", false, "Stage all changes before committing")
@@ -369,61 +70,21 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&flagStream, "stream", true, "Enable streaming output (token-by-token)")
 }
 
-// editCommitMessage opens a text editor to edit the commit message and returns the edited message
-func editCommitMessage(message string) string {
-	tempFile, err := os.CreateTemp("", "kommit-*.md")
-	if err != nil {
-		logger.Fatal("Error creating temporary file: %v", err)
-	}
-	defer os.Remove(tempFile.Name())
-
-	// Write the current message to the temp file
-	if _, err := tempFile.WriteString(message); err != nil {
-		tempFile.Close()
-		logger.Fatal("Error writing to temporary file: %v", err)
-	}
-	tempFile.Close()
-
-	// Open the editor
-	editor := os.Getenv("EDITOR")
-	if editor == "" {
-		editor = "vi" // Default to vi if no editor is set
-	}
-
-	// Execute the editor
-	cmd := exec.Command(editor, tempFile.Name())
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
-		logger.Fatal("Error opening editor: %v", err)
-	}
-
-	// Read the edited message
-	editedMessage, err := os.ReadFile(tempFile.Name())
-	if err != nil {
-		logger.Fatal("Error reading edited message: %v", err)
-	}
-
-	return strings.TrimSpace(string(editedMessage))
-}
-
-// initConfig initializes the configuration
-func initConfig() {
-	// Initialize configuration
-	if err := config.Init(cfgFile); err != nil {
+func initializeConfig() error {
+	if err := configInit(cfgFile); err != nil {
 		if cfgFile != "" {
-			logger.Fatal("Failed to initialize config from %s: %v", cfgFile, err)
-		} else {
-			logger.Fatal("Failed to initialize config: %v", err)
+			return fmt.Errorf("failed to initialize config from %s: %w", cfgFile, err)
 		}
+
+		return fmt.Errorf("failed to initialize config: %w", err)
 	}
 
-	// Log the config file being used if any
-	if viper.ConfigFileUsed() != "" {
-		logger.Info("Using config file: %s", viper.ConfigFileUsed())
+	settings := configGet()
+	if settings.ConfigFileUsed != "" {
+		logger.Info("Using config file: %s", settings.ConfigFileUsed)
 	} else {
 		logger.Info("No configuration file found, using defaults")
 	}
+
+	return nil
 }

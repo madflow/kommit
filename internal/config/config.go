@@ -39,6 +39,30 @@ type OllamaConfig struct {
 	Model     string `mapstructure:"model"`
 }
 
+type ResolvedSettings struct {
+	Config          *Config
+	ConfigFileUsed  string
+	Provider        string
+	Model           string
+	ProviderOrder   []string
+	ProviderAPIKeys map[string]string
+}
+
+type Loader struct {
+	gitDirLookup func() (string, error)
+	envLookup    func(string) string
+	configFile   string
+}
+
+const (
+	AppName                  = "kommit"
+	ConfigFileName           = "config"
+	StandaloneConfigFileName = ".kommit"
+	ConfigFileExt            = "yaml"
+)
+
+var currentSettings *ResolvedSettings
+
 func DefaultConfig() *Config {
 	return &Config{
 		Providers: map[string]ProviderConfig{
@@ -75,11 +99,11 @@ func DefaultConfig() *Config {
 	- Write as if you're typing in a plain text editor with no formatting options.
 	- Do not wrap words or phrases in any special characters.
 	- Avoid using quotation marks around technical terms unless they are part of the actual code/file names.
-  - For longer commit messages, create a separate message body.
-  - Separate the message body by including a blank line.
-  - The body of your message should provide a more detailed answers how the changes differ from the previous implementation.
-  - Use the imperative, present tense («change», not «changed» or «changes») to be consistent with generated messages from commands like git merge.
-  - Be direct, try to eliminate filler words and phrases in these sentences (examples: though, maybe, I think, kind of).`,
+	- For longer commit messages, create a separate message body.
+	- Separate the message body by including a blank line.
+	- The body of your message should provide a more detailed answers how the changes differ from the previous implementation.
+	- Use the imperative, present tense («change», not «changed» or «changes») to be consistent with generated messages from commands like git merge.
+	- Be direct, try to eliminate filler words and phrases in these sentences (examples: though, maybe, I think, kind of).`,
 		PRRules: `
 		Expected output format:
 
@@ -118,140 +142,234 @@ func DefaultConfig() *Config {
 	}
 }
 
-const (
-	AppName                  = "kommit"
-	ConfigFileName           = "config"
-	StandaloneConfigFileName = ".kommit"
-	ConfigFileExt            = "yaml"
-)
-
-var appConfig *Config
-
-func readAndUnmarshalConfig() error {
-	err := viper.ReadInConfig()
+func Init(configFile string) error {
+	settings, err := NewLoader(configFile).Load()
 	if err != nil {
 		return err
 	}
 
-	configFile := viper.ConfigFileUsed()
+	currentSettings = settings
+	return nil
+}
+
+func Get() *ResolvedSettings {
+	if currentSettings == nil {
+		settings, err := NewLoader("").Load()
+		if err != nil {
+			return defaultResolvedSettings("")
+		}
+		currentSettings = settings
+	}
+
+	return currentSettings
+}
+
+func NewLoader(configFile string) *Loader {
+	return &Loader{
+		gitDirLookup: git.GetGitDir,
+		envLookup:    os.Getenv,
+		configFile:   configFile,
+	}
+}
+
+func (l *Loader) ResolveForTest(cfg *Config) *ResolvedSettings {
+	return l.resolve(cfg, "")
+}
+
+func (l *Loader) LoadOrPanicForTest() *ResolvedSettings {
+	settings, err := l.Load()
+	if err != nil {
+		panic(err)
+	}
+	return settings
+}
+
+func (l *Loader) Load() (*ResolvedSettings, error) {
+	v := viper.New()
+	applyDefaults(v, DefaultConfig())
+	v.AutomaticEnv()
+
+	loadedConfigFile := ""
+	if l.configFile != "" {
+		v.SetConfigFile(l.configFile)
+		cfg, err := readConfig(v)
+		if err != nil {
+			return nil, fmt.Errorf("error loading config from %s: %w", l.configFile, err)
+		}
+		loadedConfigFile = v.ConfigFileUsed()
+		return l.resolve(cfg, loadedConfigFile), nil
+	}
+
+	for _, path := range l.configFilePaths() {
+		if _, err := os.Stat(path); err == nil {
+			v.SetConfigFile(path)
+			cfg, err := readConfig(v)
+			if err == nil {
+				loadedConfigFile = v.ConfigFileUsed()
+				return l.resolve(cfg, loadedConfigFile), nil
+			}
+		}
+	}
+
+	defaultConfig := DefaultConfig()
+	if err := v.Unmarshal(defaultConfig); err != nil {
+		return nil, fmt.Errorf("error applying environment overrides: %w", err)
+	}
+
+	return l.resolve(defaultConfig, loadedConfigFile), nil
+}
+
+func readConfig(v *viper.Viper) (*Config, error) {
+	if err := v.ReadInConfig(); err != nil {
+		return nil, err
+	}
+
+	configFile := v.ConfigFileUsed()
 	if configFile == "" {
 		configFile = "(unknown file)"
 	}
 
-	appConfig = &Config{}
-	if err := viper.Unmarshal(appConfig); err != nil {
-		return fmt.Errorf("error parsing %s: %w", configFile, err)
+	cfg := &Config{}
+	if err := v.Unmarshal(cfg); err != nil {
+		return nil, fmt.Errorf("error parsing %s: %w", configFile, err)
 	}
 
-	migrateLegacyConfig(appConfig)
-
-	return nil
-}
-
-func migrateLegacyConfig(cfg *Config) {
-	if len(cfg.Providers) == 0 {
-		var legacyOllama OllamaConfig
-		if err := viper.UnmarshalKey("ollama", &legacyOllama); err == nil {
-			if legacyOllama.ServerURL != "" && legacyOllama.Model != "" {
-				baseURL := legacyOllama.ServerURL
-				if strings.HasSuffix(baseURL, "/api/generate") {
-					baseURL = strings.TrimSuffix(baseURL, "/api/generate") + "/v1/"
-				}
-
-				cfg.Providers = map[string]ProviderConfig{
-					"ollama": {
-						Name:    "Ollama",
-						BaseURL: baseURL,
-						Type:    "openai-compat",
-						Models: []ModelConfig{
-							{
-								ID:               legacyOllama.Model,
-								Name:             legacyOllama.Model,
-								ContextWindow:    32768,
-								DefaultMaxTokens: 4096,
-							},
-						},
-					},
-				}
-				cfg.DefaultProvider = "ollama"
-				cfg.DefaultModel = legacyOllama.Model
-			}
-		}
+	migrateLegacyConfig(v, cfg)
+	if err := v.Unmarshal(cfg); err != nil {
+		return nil, fmt.Errorf("error applying environment overrides: %w", err)
 	}
+
+	return cfg, nil
 }
 
-func Init(configFile string) error {
-	defaults := DefaultConfig()
+func migrateLegacyConfig(v *viper.Viper, cfg *Config) {
+	if len(cfg.Providers) != 0 {
+		return
+	}
+
+	var legacyOllama OllamaConfig
+	if err := v.UnmarshalKey("ollama", &legacyOllama); err != nil {
+		return
+	}
+	if legacyOllama.ServerURL == "" || legacyOllama.Model == "" {
+		return
+	}
+
+	baseURL := legacyOllama.ServerURL
+	if strings.HasSuffix(baseURL, "/api/generate") {
+		baseURL = strings.TrimSuffix(baseURL, "/api/generate") + "/v1/"
+	}
+
+	cfg.Providers = map[string]ProviderConfig{
+		"ollama": {
+			Name:    "Ollama",
+			BaseURL: baseURL,
+			Type:    "openai-compat",
+			Models: []ModelConfig{{
+				ID:               legacyOllama.Model,
+				Name:             legacyOllama.Model,
+				ContextWindow:    32768,
+				DefaultMaxTokens: 4096,
+			}},
+		},
+	}
+	cfg.DefaultProvider = "ollama"
+	cfg.DefaultModel = legacyOllama.Model
+}
+
+func applyDefaults(v *viper.Viper, defaults *Config) {
 	if len(defaults.Providers) > 0 {
 		for providerName, provider := range defaults.Providers {
-			viper.SetDefault(fmt.Sprintf("providers.%s", providerName), provider)
+			v.SetDefault(fmt.Sprintf("providers.%s", providerName), provider)
 		}
 	}
-	viper.SetDefault("default_provider", defaults.DefaultProvider)
-	viper.SetDefault("default_model", defaults.DefaultModel)
-	viper.SetDefault("rules", defaults.Rules)
-	viper.SetDefault("pr_rules", defaults.PRRules)
-	viper.SetDefault("pr_title_rules", defaults.PRTitleRules)
-
-	if configFile != "" {
-		viper.SetConfigFile(configFile)
-		if err := readAndUnmarshalConfig(); err != nil {
-			return fmt.Errorf("error loading config from %s: %w", configFile, err)
-		}
-		return nil
-	}
-
-	for _, configPath := range getConfigFilePaths() {
-		if _, err := os.Stat(configPath); err == nil {
-			viper.SetConfigFile(configPath)
-			if err := readAndUnmarshalConfig(); err == nil {
-				return nil
-			}
-		}
-	}
-
-	appConfig = DefaultConfig()
-	viper.AutomaticEnv()
-	if err := viper.Unmarshal(appConfig); err != nil {
-		return fmt.Errorf("error applying environment overrides: %w", err)
-	}
-
-	return nil
+	v.SetDefault("default_provider", defaults.DefaultProvider)
+	v.SetDefault("default_model", defaults.DefaultModel)
+	v.SetDefault("rules", defaults.Rules)
+	v.SetDefault("pr_rules", defaults.PRRules)
+	v.SetDefault("pr_title_rules", defaults.PRTitleRules)
 }
 
-func Get() *Config {
-	if appConfig == nil {
-		return DefaultConfig()
+func (l *Loader) resolve(cfg *Config, configFileUsed string) *ResolvedSettings {
+	provider := firstNonEmpty(l.envLookup("KOMMIT_PROVIDER"), cfg.DefaultProvider, firstProvider(cfg.Providers))
+	model := firstNonEmpty(l.envLookup("KOMMIT_MODEL"), cfg.DefaultModel)
+
+	return &ResolvedSettings{
+		Config:          cfg,
+		ConfigFileUsed:  configFileUsed,
+		Provider:        provider,
+		Model:           model,
+		ProviderOrder:   providerOrder(cfg.Providers, provider),
+		ProviderAPIKeys: resolveProviderAPIKeys(cfg.Providers, l.envLookup),
 	}
-	return appConfig
 }
 
-func (c *Config) GetProvider(name string) (*ProviderConfig, error) {
+func defaultResolvedSettings(configFileUsed string) *ResolvedSettings {
+	loader := NewLoader("")
+	return loader.resolve(DefaultConfig(), configFileUsed)
+}
+
+func (l *Loader) configFilePaths() []string {
+	var paths []string
+
+	if pwd, err := os.Getwd(); err == nil {
+		paths = append(paths, filepath.Join(pwd, StandaloneConfigFileName+"."+ConfigFileExt))
+	}
+
+	if l.gitDirLookup != nil {
+		if gitDir, err := l.gitDirLookup(); err == nil && gitDir != "" {
+			paths = append(paths, filepath.Join(gitDir, StandaloneConfigFileName+"."+ConfigFileExt))
+		}
+	}
+
+	if xdgConfigHome := l.envLookup("XDG_CONFIG_HOME"); xdgConfigHome != "" {
+		paths = append(paths, filepath.Join(xdgConfigHome, AppName, ConfigFileName+"."+ConfigFileExt))
+	}
+
+	if home, err := os.UserHomeDir(); err == nil {
+		paths = append(paths, filepath.Join(home, ".config", AppName, ConfigFileName+"."+ConfigFileExt))
+		paths = append(paths, filepath.Join(home, StandaloneConfigFileName+"."+ConfigFileExt))
+	}
+
+	return paths
+}
+
+func (s *ResolvedSettings) Rules() string {
+	return s.Config.Rules
+}
+
+func (s *ResolvedSettings) PullRequestRules() string {
+	return s.Config.PRRules
+}
+
+func (s *ResolvedSettings) PullRequestTitleRules() string {
+	return s.Config.PRTitleRules
+}
+
+func (s *ResolvedSettings) ProviderConfig(name string) (*ProviderConfig, error) {
 	if name == "" {
-		name = c.DefaultProvider
+		name = s.Provider
 	}
-	if name == "" && len(c.Providers) > 0 {
-		for pname := range c.Providers {
-			name = pname
-			break
-		}
-	}
-
-	provider, ok := c.Providers[name]
+	provider, ok := s.Config.Providers[name]
 	if !ok {
 		return nil, fmt.Errorf("provider '%s' not found", name)
 	}
+
+	provider.APIKey = s.ProviderAPIKeys[name]
 	return &provider, nil
 }
 
-func (c *Config) GetModel(providerName, modelID string) (*ModelConfig, error) {
-	provider, err := c.GetProvider(providerName)
-	if err != nil {
-		return nil, err
+func (s *ResolvedSettings) ModelConfig(providerName, modelID string) (*ModelConfig, error) {
+	if providerName == "" {
+		providerName = s.Provider
+	}
+	if modelID == "" {
+		modelID = s.Model
 	}
 
-	if modelID == "" {
-		modelID = c.DefaultModel
+	provider, err := s.ProviderConfig(providerName)
+	if err != nil {
+		return nil, err
 	}
 
 	for i := range provider.Models {
@@ -260,49 +378,28 @@ func (c *Config) GetModel(providerName, modelID string) (*ModelConfig, error) {
 		}
 	}
 
-	if modelID == c.DefaultModel && len(provider.Models) > 0 {
+	if modelID == s.Model && len(provider.Models) > 0 {
 		return &provider.Models[0], nil
 	}
 
 	return nil, fmt.Errorf("model '%s' not found in provider '%s'", modelID, providerName)
 }
 
-func (c *Config) ResolveProviderModel(providerFlag, modelFlag string) (string, string) {
-	provider := providerFlag
-	model := modelFlag
-
-	if provider == "" {
-		provider = os.Getenv("KOMMIT_PROVIDER")
+func firstProvider(providers map[string]ProviderConfig) string {
+	for name := range providers {
+		return name
 	}
-	if model == "" {
-		model = os.Getenv("KOMMIT_MODEL")
-	}
-
-	if provider == "" {
-		provider = c.DefaultProvider
-	}
-	if model == "" {
-		model = c.DefaultModel
-	}
-
-	if provider == "" && len(c.Providers) > 0 {
-		for pname := range c.Providers {
-			provider = pname
-			break
-		}
-	}
-
-	return provider, model
+	return ""
 }
 
-func (c *Config) GetProviderFallbackOrder(preferredProvider string) []string {
+func providerOrder(providers map[string]ProviderConfig, preferred string) []string {
 	var order []string
-	if preferredProvider != "" {
-		order = append(order, preferredProvider)
+	if preferred != "" {
+		order = append(order, preferred)
 	}
 
-	for name := range c.Providers {
-		if name != preferredProvider {
+	for name := range providers {
+		if name != preferred {
 			order = append(order, name)
 		}
 	}
@@ -310,39 +407,27 @@ func (c *Config) GetProviderFallbackOrder(preferredProvider string) []string {
 	return order
 }
 
-func getConfigFilePaths() []string {
-	var paths []string
-
-	if pwd, err := os.Getwd(); err == nil {
-		paths = append(paths, filepath.Join(pwd, StandaloneConfigFileName+"."+ConfigFileExt))
+func resolveProviderAPIKeys(providers map[string]ProviderConfig, env func(string) string) map[string]string {
+	keys := make(map[string]string, len(providers))
+	for name, provider := range providers {
+		envKey := fmt.Sprintf("%s_API_KEY", strings.ToUpper(name))
+		switch {
+		case env(envKey) != "":
+			keys[name] = env(envKey)
+		case provider.Type == "openai-compat" && env("OPENAI_API_KEY") != "":
+			keys[name] = env("OPENAI_API_KEY")
+		default:
+			keys[name] = provider.APIKey
+		}
 	}
-
-	if gitDir, err := git.GetGitDir(); err == nil && gitDir != "" {
-		paths = append(paths, filepath.Join(gitDir, StandaloneConfigFileName+"."+ConfigFileExt))
-	}
-
-	if xdgConfigHome := os.Getenv("XDG_CONFIG_HOME"); xdgConfigHome != "" {
-		paths = append(paths, filepath.Join(xdgConfigHome, AppName, ConfigFileName+"."+ConfigFileExt))
-	}
-
-	home, err := os.UserHomeDir()
-	if err == nil {
-		paths = append(paths, filepath.Join(home, ".config", AppName, ConfigFileName+"."+ConfigFileExt))
-		paths = append(paths, filepath.Join(home, StandaloneConfigFileName+"."+ConfigFileExt))
-	}
-
-	return paths
+	return keys
 }
 
-type Getter interface {
-	GetString(key string) string
-	GetStringMap(key string) map[string]any
-	GetStringMapString(key string) map[string]string
-	GetStringSlice(key string) []string
-	GetInt(key string) int
-	GetBool(key string) bool
-}
-
-func Viper() Getter {
-	return viper.GetViper()
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
 }

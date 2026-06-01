@@ -12,23 +12,23 @@ providers:
     base_url: "http://localhost:11434/v1/"
     type: "openai-compat"
     models:
-      - name: "Qwen 2.5 Coder 7B"
-        id: "qwen2.5-coder:7b"
+      - name: "gemma4:e4b "
+        id: "gemma4:e4b"
         context_window: 32768
         default_max_tokens: 4096
 
 # Optional: set default provider/model (if not set, first provider/model is used)
 default_provider: "ollama"
-default_model: "qwen2.5-coder:7b"
+default_model: "gemma4:e4b"
 
 # Rules for generating conventional commit messages
 rules: |
   Follow the Conventional Commits specification (https://www.conventionalcommits.org/)
-  
+
   Format: <type>[optional scope]: <description>
   [optional body]
   [optional footer(s)]
-  
+
   Types:
   - feat: A new feature
   - fix: A bug fix
@@ -38,7 +38,7 @@ rules: |
   - perf: A code change that improves performance
   - test: Adding missing tests or correcting existing tests
   - chore: Changes to the build process or auxiliary tools and libraries
-  
+
   Rules:
   1. Use the imperative, present tense ("add feature" not "added feature")
   2. Do not capitalize the first letter of the description
@@ -57,16 +57,16 @@ rules: |
 
   General Examples:
   feat(auth): add login functionality
-  
+
   - Implement JWT token generation on successful login
   - Add login form validation
   - Update authentication middleware
 
   docs(readme):📚 updated usage instructions
-  
+
   - Updated instrcutions on how to use the application
   - Added usage examples
-  
+
   Emoji Reference:
   ✨ feat: New feature
   🐛 fix: Bug fix
@@ -115,3 +115,4 @@ pr_title_rules: |
   - Focus on the primary change or most important aspect.
   - Use title case for the first word only.
   - Examples: "Add user authentication system", "Fix memory leak in parser", "Update API documentation".
+
